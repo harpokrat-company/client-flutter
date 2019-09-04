@@ -1,4 +1,8 @@
-# Flutter Mobile Client
+# harpokrat
 
-Mobile client developped in Flutter.
-I decided to follow the gitflow norm 
+A Dashlane clone
+
+## Getting Started
+
+For help getting started with Flutter, view our online
+[documentation](https://flutter.io/).
