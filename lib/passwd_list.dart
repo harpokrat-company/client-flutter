@@ -6,16 +6,25 @@ class PasswdListState extends StatefulWidget {
   PasswdListState({Key key, this.title}) : super(key: key);
 
   final String title;
-  ListView listView;
   final passwordList = ["Google", "Outlook", "Facebook", "Amazon", "twitter"];
   final passwordHint = ["email and services provider", "e-mail provider",
   'social media', 'e-shop', 'social media'];
 
   @override
   PasswdList createState() {
+    return PasswdList();
+  }
+}
+
+
+class PasswdList extends State<PasswdListState> {
+  ListView listView;
+  bool loaded = false;
+
+  void loadData() {
     this.listView = ListView.builder(
         padding: const EdgeInsets.all(8.0),
-        itemCount: this.passwordList.length,
+        itemCount: widget.passwordList.length,
         itemBuilder: (BuildContext context, int index) {
           return Container(
             height: 144,
@@ -25,10 +34,10 @@ class PasswdListState extends StatefulWidget {
                 children: <Widget>[
                   ListTile(
                     leading: Icon(Icons.security),
-                    title: Text('${this.passwordList[index]}'),
-                    subtitle: Text('${this.passwordHint[index]}'),
+                    title: Text('${widget.passwordList[index]}'),
+                    subtitle: Text('${widget.passwordHint[index]}'),
                   ),
-                  ButtonTheme.bar( // make buttons use the appropriate styles for cards
+                  ButtonBarTheme( // make buttons use the appropriate styles for cards
                     child: ButtonBar(
                       children: <Widget>[
                         FlatButton(
@@ -41,26 +50,26 @@ class PasswdListState extends StatefulWidget {
                         ),
                       ],
                     ),
+                    data: ButtonBarThemeData(),
                   ),
                 ],
               ),
             ),);
         }
     );
-    return PasswdList();
+    this.loaded = true;
   }
-}
 
-
-class PasswdList extends State<PasswdListState> {
   // This widget is the root of my page
   @override
   Widget build(BuildContext context) {
+    if (loaded == false)
+      this.loadData();
     return new Scaffold(
         appBar: new AppBar(
           title: new Text("My passwords"),
         ),
-        body: widget.listView,
+        body: this.listView,
         bottomNavigationBar: BottomNavigationBar(
             items: const <BottomNavigationBarItem>[
               BottomNavigationBarItem(

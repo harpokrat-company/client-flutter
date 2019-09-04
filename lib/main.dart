@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:harpokrat/passwd_list.dart';
+import 'package:harpokrat/session.dart';
 
 void main() => runApp(new MyApp());
 
@@ -21,23 +22,76 @@ class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
 
   final String title;
+  Session session = Session('https://api.harpokrat.com', "443");
 
   @override
   _MyHomePageState createState() => new _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  bool _loading = false;
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final _errorScaffoldKey = GlobalKey<ScaffoldState>();
 
-  void _incrementCounter() {
+  String errorMessage;
+
+
+  void handleConnection(bool success) {
+    if (success)
+      this.launchPasswdList();
+    else {
+      setState(() {
+        _loading = false;
+        errorMessage = "Can't connect user: ${emailController.text}";
+      });
+      _errorScaffoldKey.currentState.showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+  }
+
+  void connectUser() {
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
       // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
+      // _loading without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
-      _counter++;
+      _loading = true;
     });
+    final email = emailController.text;
+    try {
+      Future<bool> connected =
+      widget.session.connectUser(email, passwordController.text);
+      connected.then(this.handleConnection).
+      catchError((onError) {
+        print("in catchErro");
+        setState(() {
+          _loading = false;
+        });
+        _errorScaffoldKey.currentState.showSnackBar(SnackBar(content: Text(onError.toString())));
+      });
+    } on Exception catch (e) {
+      setState(() {
+        _loading = false;
+      });
+      _errorScaffoldKey.currentState.showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+    print("Exiting connectUser function");
+  }
+
+  @override
+  void dispose() {
+    // dispose data to avoid critical memory leaks
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  void launchPasswdList() {
+    Navigator.push(context,
+      new MaterialPageRoute(builder: (ctxt) => new PasswdListState()),);
+    print("New page launched");
+      _loading = false;
   }
 
   @override
@@ -49,56 +103,46 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return new Scaffold(
-      appBar: new AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: new Text(widget.title),
-      ),
-      body: new Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: new Column(
-          // Column is also layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug paint" (press "p" in the console where you ran
-          // "flutter run", or select "Toggle Debug Paint" from the Flutter tool
-          // window in IntelliJ) to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Image(image: AssetImage("images/HPKLogo.png"), height: 200),
-        TextFormField(
-        decoration: InputDecoration(
-          border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-            hintText: 'Please enter your email address'
+      key: this._errorScaffoldKey,
+        appBar: new AppBar(
+          // Here we take the value from the MyHomePage object that was created by
+          // the App.build method, and use it to set our appbar title.
+          title: new Text(widget.title),
         ),
-      ),
-        TextFormField(
-          decoration: InputDecoration(
-              border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-              hintText: 'Please enter your password',
+        body: new Center(
+          // Center is a layout widget. It takes a single child and positions it
+          // in the middle of the parent.
+          child: new Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Image(image: AssetImage("images/HPKLogo.png"), height: 200),
+              TextFormField(
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                  hintText: 'Please enter your email address',
+                ),
+                controller: emailController,
+              ),
+              TextFormField(
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                  hintText: 'Please enter your password',
+                ),
+                obscureText: true,
+                controller: passwordController,
+              ),
+              if (_loading)
+                CircularProgressIndicator()
+              else
+                RaisedButton(
+                    onPressed: connectUser,
+                    child: const Text(
+                        'Log in',
+                        style: TextStyle(fontSize: 20)
+                    )),
+            ],
           ),
-          obscureText: true,
-        ),
-      RaisedButton(
-        onPressed: () {Navigator.push(
-          context,
-          new MaterialPageRoute(builder: (ctxt) => new PasswdListState()),
-        );},
-        child: const Text(
-            'Log in',
-            style: TextStyle(fontSize: 20)
-        ))
-          ],
-        ),
-      )
+        )
     );
   }
 }
