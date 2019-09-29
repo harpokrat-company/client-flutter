@@ -49,13 +49,12 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  ///
+  /// This method tries to connect to the server and display a
+  /// snackbar with the error on it when it fails
+  ///
   void connectUser() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _loading without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
       _loading = true;
     });
     final email = emailController.text;
@@ -89,7 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void launchPasswdList() {
     Navigator.push(context,
-      new MaterialPageRoute(builder: (ctxt) => new PasswdListState()),);
+      new MaterialPageRoute(builder: (ctxt) => new PasswdListState(session: widget.session)),);
     print("New page launched");
       _loading = false;
   }
@@ -115,7 +114,7 @@ class _MyHomePageState extends State<MyHomePage> {
           child: new Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Image(image: AssetImage("images/HPKLogo.png"), height: 200),
+              Image(image: AssetImage("images/HPKLogo.png"), height: 150),
               TextFormField(
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),

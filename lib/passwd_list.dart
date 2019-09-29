@@ -1,30 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
+import 'package:harpokrat/session.dart';
+
 
 
 class PasswdListState extends StatefulWidget {
-  PasswdListState({Key key, this.title}) : super(key: key);
+  PasswdListState({Key key, @required this.session, this.title}) : super(key: key);
 
   final String title;
-  final passwordList = ["Google", "Outlook", "Facebook", "Amazon", "twitter"];
-  final passwordHint = ["email and services provider", "e-mail provider",
-  'social media', 'e-shop', 'social media'];
+  final Session session;
 
   @override
   PasswdList createState() {
     return PasswdList();
   }
+
+  Future<List<Map<String, dynamic>>> loadPassword() async {
+    return this.session.getPassword();
+  }
+
 }
 
 
 class PasswdList extends State<PasswdListState> {
   ListView listView;
   bool loaded = false;
+  bool loading = false;
 
-  void loadData() {
+  void loadPassword() {
+
+    this.loading = true;
+    widget.loadPassword().then((onValue) {
+      setState(() {
+        this.loadWidget(onValue);
+        this.loading = false;
+      });
+    });
+  }
+
+  void loadWidget(List<Map<String, dynamic>> passwordList) {
     this.listView = ListView.builder(
         padding: const EdgeInsets.all(8.0),
-        itemCount: widget.passwordList.length,
+        itemCount: passwordList.length,
         itemBuilder: (BuildContext context, int index) {
           return Container(
             height: 144,
@@ -34,19 +52,22 @@ class PasswdList extends State<PasswdListState> {
                 children: <Widget>[
                   ListTile(
                     leading: Icon(Icons.security),
-                    title: Text('${widget.passwordList[index]}'),
-                    subtitle: Text('${widget.passwordHint[index]}'),
+                    title: Text('${passwordList[index]["name"]}'),
+                    subtitle: Text('${passwordList[index]["hint"]}'),
                   ),
                   ButtonBarTheme( // make buttons use the appropriate styles for cards
                     child: ButtonBar(
                       children: <Widget>[
                         FlatButton(
                           child: const Text('COPY'),
-                          onPressed: () { /* ... */ },
+                          onPressed: () {
+                            Clipboard.setData(new ClipboardData(text: passwordList[index]["password"]));
+                            Scaffold.of(context).showSnackBar(new SnackBar(content: Text("password copied to clipboard")));
+                            },
                         ),
                         FlatButton(
                           child: const Text('SHOW'),
-                          onPressed: () { /* ... */ },
+                          onPressed: () { Scaffold.of(context).showSnackBar(new SnackBar(content: Text("Your password is ${passwordList[index]['password']}"))); },
                         ),
                       ],
                     ),
@@ -63,13 +84,13 @@ class PasswdList extends State<PasswdListState> {
   // This widget is the root of my page
   @override
   Widget build(BuildContext context) {
-    if (loaded == false)
-      this.loadData();
+    if (this.loaded == false && this.loading == false)
+      this.loadPassword();
     return new Scaffold(
         appBar: new AppBar(
           title: new Text("My passwords"),
         ),
-        body: this.listView,
+        body: (this.loading) ? CircularProgressIndicator(): this.listView,
         bottomNavigationBar: BottomNavigationBar(
             items: const <BottomNavigationBarItem>[
               BottomNavigationBarItem(
