@@ -88,7 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void launchPasswdList() {
     Navigator.push(context,
-      new MaterialPageRoute(builder: (ctxt) => new PasswdListState(session: widget.session)),);
+      new MaterialPageRoute(builder: (ctxt) => new PasswordListState(session: widget.session)),);
     print("New page launched");
       _loading = false;
   }

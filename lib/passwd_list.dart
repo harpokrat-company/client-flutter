@@ -5,15 +5,15 @@ import 'package:harpokrat/session.dart';
 
 
 
-class PasswdListState extends StatefulWidget {
-  PasswdListState({Key key, @required this.session, this.title}) : super(key: key);
+class PasswordListState extends StatefulWidget {
+  PasswordListState({Key key, @required this.session, this.title}) : super(key: key);
 
   final String title;
   final Session session;
 
   @override
-  PasswdList createState() {
-    return PasswdList();
+  PasswordList createState() {
+    return PasswordList();
   }
 
   Future<List<Map<String, dynamic>>> loadPassword() async {
@@ -23,7 +23,7 @@ class PasswdListState extends StatefulWidget {
 }
 
 
-class PasswdList extends State<PasswdListState> {
+class PasswordList extends State<PasswordListState> {
   ListView listView;
   bool loaded = false;
   bool loading = false;
@@ -39,6 +39,8 @@ class PasswdList extends State<PasswdListState> {
     });
   }
 
+  /// This method generate
+  ///
   void loadWidget(List<Map<String, dynamic>> passwordList) {
     this.listView = ListView.builder(
         padding: const EdgeInsets.all(8.0),
