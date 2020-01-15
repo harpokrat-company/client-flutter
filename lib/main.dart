@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:harpokrat/passwd_list.dart';
 import 'package:harpokrat/session.dart';
+import 'package:harpokrat/subscribe.dart';
 
 void main() => runApp(new MyApp());
 
@@ -12,6 +13,7 @@ class MyApp extends StatelessWidget {
       title: 'Harpokrat mobile client',
       theme: new ThemeData(
         accentColor: Colors.blueAccent,
+        backgroundColor: Colors.black
       ),
       home: new MyHomePage(title: 'Harpokrat'),
     );
@@ -39,7 +41,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void handleConnection(bool success) {
     if (success)
-      this.launchPasswdList();
+      this.launchPasswordList();
     else {
       setState(() {
         _loading = false;
@@ -63,7 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
       widget.session.connectUser(email, passwordController.text);
       connected.then(this.handleConnection).
       catchError((onError) {
-        print("in catchErro");
+        print("in catchError");
         setState(() {
           _loading = false;
         });
@@ -86,11 +88,17 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  void launchPasswdList() {
+  void launchPasswordList() {
     Navigator.push(context,
       new MaterialPageRoute(builder: (ctxt) => new PasswordListState(session: widget.session)),);
     print("New page launched");
       _loading = false;
+  }
+
+  void launchSubscribePage() {
+    Navigator.push(context,
+      new MaterialPageRoute(builder: (ctxt) => new SubscribeState(session: widget.session)),);
+    print("New page launched");
   }
 
   @override
@@ -109,12 +117,14 @@ class _MyHomePageState extends State<MyHomePage> {
           title: new Text(widget.title),
         ),
         body: new Center(
+
           // Center is a layout widget. It takes a single child and positions it
           // in the middle of the parent.
           child: new Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Image(image: AssetImage("images/HPKLogo.png"), height: 150),
+              Expanded(
+                child: Image(image: AssetImage("images/HPKLogo.png"))),
               TextFormField(
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
@@ -129,6 +139,14 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 obscureText: true,
                 controller: passwordController,
+              ),
+              InkWell (
+                child: Text("I don't have an account",
+                  style: TextStyle(
+                      color: Colors.blueAccent,
+                      decoration: TextDecoration.underline),
+                textScaleFactor: 1,),
+                onTap: launchSubscribePage,
               ),
               if (_loading)
                 CircularProgressIndicator()

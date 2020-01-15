@@ -1,7 +1,12 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:harpokrat/session.dart';
+import 'package:harpokrat/user_information.dart';
+
+import 'preferences.dart';
 
 
 
@@ -28,10 +33,10 @@ class PasswordList extends State<PasswordListState> {
   bool loaded = false;
   bool loading = false;
 
-  void loadPassword() {
+  Future<Null> loadPassword() {
 
     this.loading = true;
-    widget.loadPassword().then((onValue) {
+    return widget.loadPassword().then((onValue) {
       setState(() {
         this.loadWidget(onValue);
         this.loading = false;
@@ -39,7 +44,82 @@ class PasswordList extends State<PasswordListState> {
     });
   }
 
-  /// This method generate
+  void _onItemTapped(int index) {
+    var page;
+    switch (index) {
+      case 1:
+        page = new MaterialPageRoute(builder: (ctxt) => new UserInformationState(session: widget.session));
+        break;
+      case 2:
+        page = new MaterialPageRoute(builder: (ctxt) => new PreferenceState(session: widget.session));
+        break;
+    }
+    Navigator.push(context, page);
+  }
+
+  void _showCreatePasswordDialog() {
+    print("BLABLABLA");
+    final nameController = TextEditingController();
+    final loginController = TextEditingController();
+    final passwordController = TextEditingController();
+    showDialog(context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text("Create new password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextFormField(
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                hintText: 'Enter name',
+              ),
+              controller: nameController,
+            ),
+            TextFormField(
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                hintText: 'Enter login',
+              ),
+              controller: loginController,
+            ),
+            TextFormField(
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                hintText: 'Enter password',
+              ),
+              obscureText: true,
+              controller: passwordController,
+            )
+          ],
+        ),
+          actions: <Widget>[
+            FlatButton(
+              child: Text("Cancel"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            FlatButton(
+              child: Text("Save"),
+              onPressed: () {
+                widget.session.createPassword(nameController.text,
+                    loginController.text,
+                    passwordController.text);
+                Navigator.of(context).pop();
+              },
+            )
+          ],
+      );
+    });
+  }
+
+
+  Future<Null> _refresh() {
+    return this.loadPassword();
+  }
+
+  /// This method generates the password list
   ///
   void loadWidget(List<Map<String, dynamic>> passwordList) {
     this.listView = ListView.builder(
@@ -89,11 +169,15 @@ class PasswordList extends State<PasswordListState> {
     if (this.loaded == false && this.loading == false)
       this.loadPassword();
     return new Scaffold(
+      resizeToAvoidBottomInset: false,
         appBar: new AppBar(
           title: new Text("My passwords"),
         ),
-        body: (this.loading) ? CircularProgressIndicator(): this.listView,
+        body: RefreshIndicator(
+            onRefresh: _refresh,
+            child:(this.loading) ? CircularProgressIndicator(): this.listView),
         bottomNavigationBar: BottomNavigationBar(
+          onTap: _onItemTapped,
             items: const <BottomNavigationBarItem>[
               BottomNavigationBarItem(
                 icon: Icon(Icons.home),
@@ -106,9 +190,14 @@ class PasswordList extends State<PasswordListState> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.settings),
                 title: Text('Settings'),
-              )
+              ),
             ]
-        )
+        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showCreatePasswordDialog,
+        child: Icon(Icons.add),
+        backgroundColor: Colors.blueAccent,
+      ),
     );
   }
 }
