@@ -2,6 +2,8 @@ import 'dart:collection';
 
 import 'package:http/http.dart' as http;
 import 'package:json_api/json_api.dart' as json_api;
+import 'package:hclw_flutter/hclw_flutter.dart' as hclw;
+import 'package:hclw_flutter/secret.dart' as hclw_secret;
 import 'dart:convert';
 
 import 'entities/User.dart';
@@ -13,11 +15,13 @@ class Session {
   String _port;
   User user;
   json_api.JsonApiClient jsonApiClient;
+  hclw.HclwFlutter lib;
   Map<String, String> _header = {
   };
 
 
   Session(this._url, this._port) {
+    lib = new hclw.HclwFlutter();
     final httpClient = http.Client();
     this.jsonApiClient = json_api.JsonApiClient(httpClient);
   }
@@ -74,7 +78,10 @@ class Session {
     }
     return response;
   }
-
+ /*
+ *  Fetch resources from the server
+ *
+ */
   Future<json_api.Response<json_api.ResourceData>> fetchResource(String route, {String arg}) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/$route" + (arg == null ? "": "/$arg"));
@@ -89,7 +96,7 @@ class Session {
   }
 
 
-
+  // Register and encrypt new password on the server
   void createPassword(String url, String email, String password) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets");
@@ -103,6 +110,10 @@ class Session {
     print(test.status);
   }
 
+
+  /*
+  * Create user on the server, needs the User object
+   */
   Future<bool> createUser(User user) async {
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/users");
 
@@ -117,28 +128,29 @@ class Session {
     return test.isSuccessful;
   }
 
+  /*
+  * Create and encrypt blob from json to hexadecimal format
+   */
   String createBlob(String url, String email, String password) {
-    return base64.encode(utf8.encode(json.encode({"name": url, "hint": email, "password": password})));
+    hclw_secret.Secret secret = new hclw_secret.Secret(lib, content:"");
+    secret.password = password;
+    secret.domain = url;
+    secret.name = url;
+    secret.login = email;
+    // TODO: inject encryption library
+    return secret.content;
   }
 
-  Future<List<Map<String, dynamic>>> getPassword() async {
+  Future<List<hclw_secret.Secret>> getPassword() async {
     final response = await fetchCollection("secrets");
-    List<Map<String, dynamic>> res = [];
+    List<hclw_secret.Secret> res = [];
     for (var secret in response.data.collection) {
-      final encryptedSecret = secret.attributes["content"];
+      final String encryptedSecret = secret.attributes["content"];
       if ((secret.relationships["owner"] as json_api.ToOne).linkage.id != this.user.id)
         continue;
-      try {
-        String decryptedSecret = utf8.decode(base64Decode(encryptedSecret));
-        Map<String, dynamic> jsonSecret = jsonDecode(decryptedSecret);
-        if (jsonSecret.containsKey("name")) {
-          print("Parsed: " + decryptedSecret);
-          res.add(jsonSecret);
-        }
-      }
-      catch (e) {
-          print(e);
-    }
+        final decryptedSecret = new hclw_secret.Secret(
+            lib, content: encryptedSecret);
+        res.add(decryptedSecret);
     }
     return res;
   }

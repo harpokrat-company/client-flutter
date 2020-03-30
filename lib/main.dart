@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:harpokrat/passwd_list.dart';
+import 'package:harpokrat/views/passwd_list.dart';
 import 'package:harpokrat/session.dart';
-import 'package:harpokrat/subscribe.dart';
+import 'package:harpokrat/views/subscribe.dart';
 
 void main() => runApp(new MyApp());
 

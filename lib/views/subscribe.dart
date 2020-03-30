@@ -3,14 +3,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-import 'entities/User.dart';
-import 'session.dart';
+import '../entities/User.dart';
+import '../session.dart';
 
 class SubscribeState extends StatefulWidget {
   SubscribeState({Key key, @required session,this.title}) : super(key: key);
 
   final String title;
-  Session session = Session('https://api.harpokrat.com', "443");
+  final Session session = Session('https://api.harpokrat.com', "443");
 
   @override
   SubscribePage createState() {
@@ -27,6 +27,7 @@ class SubscribePage extends State<SubscribeState> {
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
+  bool isCreatingUser = false;
 
   void createUser() {
     if (passwordController.text != confirmPasswordController.text) {
@@ -65,6 +66,7 @@ class SubscribePage extends State<SubscribeState> {
                   FlatButton(
                     child: Text("Ok"),
                     onPressed: () {
+                      isCreatingUser = true;
                       Navigator.of(context).pop();
                     },
                   )
@@ -90,6 +92,7 @@ class SubscribePage extends State<SubscribeState> {
               );
             });
     });
+    isCreatingUser = true;
   }
 
   @override
@@ -142,7 +145,7 @@ class SubscribePage extends State<SubscribeState> {
                 obscureText: true,
                 controller: confirmPasswordController,
               ),
-              RaisedButton(
+              isCreatingUser ?  CircularProgressIndicator(): RaisedButton(
                   onPressed: createUser,
                   child: const Text(
                       'Subscribe',
