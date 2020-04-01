@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:harpokrat/entities/Password.dart';
 import 'package:http/http.dart' as http;
 import 'package:json_api/json_api.dart' as json_api;
 import 'package:hclw_flutter/hclw_flutter.dart' as hclw;
@@ -95,7 +96,6 @@ class Session {
     return response;
   }
 
-
   // Register and encrypt new password on the server
   void createPassword(String url, String email, String password) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
@@ -107,6 +107,28 @@ class Session {
     print(this._header);
     final test = await this.jsonApiClient.createResource(uri, resource, headers: this._header);
     print("blob: $blob");
+    print(test.status);
+  }
+
+  // Register and encrypt new password on the server
+  void updatePassword(Password password) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets/${password.id}");
+
+    print(uri);
+    final resource = json_api.Resource("secrets", password.id,
+        attributes: {"content": password.secret.content},
+        toOne: {"owner": json_api.Identifier("users", user.id)});
+    final test = await this.jsonApiClient.updateResource(uri, resource, headers: this._header);
+    print(test.status);
+  }
+
+  // Register and encrypt new password on the server
+  void deletePassword(Password password) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets/${password.id}");
+    print(uri);
+    final test = await this.jsonApiClient.deleteResource(uri, headers: this._header);
     print(test.status);
   }
 
@@ -141,16 +163,16 @@ class Session {
     return secret.content;
   }
 
-  Future<List<hclw_secret.Secret>> getPassword() async {
+  Future<List<Password>> getPassword() async {
     final response = await fetchCollection("secrets");
-    List<hclw_secret.Secret> res = [];
+    List<Password> res = [];
     for (var secret in response.data.collection) {
       final String encryptedSecret = secret.attributes["content"];
       if ((secret.relationships["owner"] as json_api.ToOne).linkage.id != this.user.id)
         continue;
         final decryptedSecret = new hclw_secret.Secret(
             lib, content: encryptedSecret);
-        res.add(decryptedSecret);
+        res.add(Password(decryptedSecret, secret.id));
     }
     return res;
   }

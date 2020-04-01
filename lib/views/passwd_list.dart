@@ -3,7 +3,9 @@ import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
+import 'package:harpokrat/entities/Password.dart';
 import 'package:harpokrat/session.dart';
+import 'package:harpokrat/views/password_view.dart';
 import 'package:harpokrat/views/user_information.dart';
 import 'package:hclw_flutter/secret.dart' as hclw_secret;
 
@@ -23,7 +25,7 @@ class PasswordListState extends StatefulWidget {
     return PasswordList();
   }
 
-  Future<List<hclw_secret.Secret>> loadPassword() async {
+  Future<List<Password>> loadPassword() async {
     return this.session.getPassword();
   }
 
@@ -70,7 +72,7 @@ class PasswordList extends State<PasswordListState> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            TextFormField(
+            TextField(
               decoration: InputDecoration(
                 border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
                 hintText: 'Enter name',
@@ -122,7 +124,7 @@ class PasswordList extends State<PasswordListState> {
 
   /// This method generates the password list
   ///
-  void loadWidget(List<hclw_secret.Secret> passwordList) {
+  void loadWidget(List<Password> passwordList) {
     this.listView = ListView.builder(
         padding: const EdgeInsets.all(8.0),
         itemCount: passwordList.length,
@@ -131,14 +133,17 @@ class PasswordList extends State<PasswordListState> {
             height: 144,
             child: Card(
               child: InkWell(
-              onTap: () => print('Card clicked'),
+              onTap: () => Navigator.push(context,
+                  new MaterialPageRoute(
+                      builder: (ctxt) => new PasswordView(
+                          session: widget.session, password: passwordList[index]))),
           child:Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   ListTile(
                     leading: Icon(Icons.security),
-                    title: Text('${passwordList[index].name}'),
-                    subtitle: Text('${passwordList[index].login}'),
+                    title: Text('${passwordList[index].secret.name}'),
+                    subtitle: Text('${passwordList[index].secret.login}'),
                   ),
                   ButtonBarTheme( // make buttons use the appropriate styles for cards
                     child: ButtonBar(
@@ -146,13 +151,14 @@ class PasswordList extends State<PasswordListState> {
                         FlatButton(
                           child: const Text('COPY'),
                           onPressed: () {
-                            Clipboard.setData(new ClipboardData(text: passwordList[index].password));
+                            Clipboard.setData(new ClipboardData(text: passwordList[index].secret.password));
                             Scaffold.of(context).showSnackBar(new SnackBar(content: Text("password copied to clipboard")));
                             },
                         ),
                         FlatButton(
                           child: const Text('SHOW'),
-                          onPressed: () { Scaffold.of(context).showSnackBar(new SnackBar(content: Text("Your password is ${passwordList[index].password}"))); },
+                          onPressed: () { Scaffold.of(context)
+                              .showSnackBar(new SnackBar(content: Text("Your password is ${passwordList[index].secret.password}"))); },
                         ),
                       ],
                     ),
