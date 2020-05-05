@@ -7,7 +7,7 @@ description: A neat password manager
 # Both the version and the builder number may be overridden in flutter
 # build by specifying --build-name and --build-number, respectively.
 # Read more about versioning at semver.org.
-version: 1.0.2+2
+version: 1.0.2+3
 
 dependencies:
   flutter:
@@ -19,20 +19,25 @@ dependencies:
   http: ^0.12.0+2
   json_api: ^2.0.2
 
+
   hclw_flutter:
     path: ../../Harpokrat cryptograpic library/hclw-flutter
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: "^0.7.5"
 
+flutter_icons:
+  image_path: 'images/HPKLogo.png'
+  android: true
+  ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://www.dartlang.org/tools/pub/pubspec
 
 # The following section is specific to Flutter.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

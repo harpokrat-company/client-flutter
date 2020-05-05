@@ -1,4 +1,4 @@
-package com.example.harpokrat;
+package com.harpokrat.android;
 
 import android.os.Bundle;
 import io.flutter.app.FlutterActivity;
