@@ -7,10 +7,9 @@ import 'package:harpokrat/entities/Password.dart';
 import 'package:harpokrat/session.dart';
 import 'package:harpokrat/views/password_view.dart';
 import 'package:harpokrat/views/user_information.dart';
-import 'package:hclw_flutter/secret.dart' as hclw_secret;
 
 
-import '../preferences.dart';
+import 'preferences.dart';
 
 
 
@@ -52,13 +51,15 @@ class PasswordList extends State<PasswordListState> {
     var page;
     switch (index) {
       case 1:
-        page = new MaterialPageRoute(builder: (ctxt) => new UserInformationState(session: widget.session));
+        page = "user_informations";
         break;
       case 2:
-        page = new MaterialPageRoute(builder: (ctxt) => new PreferenceState(session: widget.session));
+        page = "preferences";
         break;
+      default:
+        return;
     }
-    Navigator.push(context, page);
+    Navigator.popAndPushNamed(context, page, arguments: widget.session);
   }
 
   void _showCreatePasswordDialog() {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'passwd_list.dart';
-import '../preferences.dart';
+import 'preferences.dart';
 import '../session.dart';
 
 
@@ -27,16 +27,15 @@ class UserInformationPage extends State<UserInformationState> {
     var page;
     switch (index) {
       case 0:
-        page = new MaterialPageRoute(builder: (ctxt) => new PasswordListState(session: widget.session));
+        page = "password_list";
         break;
       case 2:
-        page = new MaterialPageRoute(builder: (ctxt) => new PreferenceState(session: widget.session));
+        page = "preferences";
         break;
       default:
-        break;
+        return;
     }
-    if (page != null)
-      Navigator.push(context, page);
+    Navigator.popAndPushNamed(context, page, arguments: widget.session);
   }
 
   Future<bool> fetchUserInfo() async {
@@ -52,6 +51,13 @@ class UserInformationPage extends State<UserInformationState> {
   @override
   Widget build(BuildContext context) {
     fetchUserInfo();
+
+    var firstNameController = new TextEditingController();
+    var lastNameController = new TextEditingController();
+    if (widget.infoFetched) {
+      firstNameController.text = widget.session.user.attributes["firstName"];
+      lastNameController.text = widget.session.user.attributes["lastName"];
+    }
     // TODO: implement build
     return new Scaffold(
       appBar: new AppBar(
@@ -63,13 +69,13 @@ class UserInformationPage extends State<UserInformationState> {
             ListTile(
               leading: Icon(Icons.account_circle),
               title: Text("First name"),
-              subtitle: Text(widget.session.user.attributes["firstName"]),
+              subtitle: TextField(controller: firstNameController),
               trailing: Icon(Icons.more_vert),
             ),
             ListTile(
               leading: Icon(Icons.account_circle),
               title: Text("Last name"),
-              subtitle: Text(widget.session.user.attributes["lastName"]),
+                subtitle: TextField(controller: lastNameController),
                 trailing: Icon(Icons.more_vert)
             ),
             ListTile(
@@ -81,8 +87,20 @@ class UserInformationPage extends State<UserInformationState> {
           ],
         )
       ),
+      floatingActionButton: Builder (builder: (context) => FloatingActionButton(
+        onPressed: () {
+      widget.session.user.attributes["firstName"] = firstNameController.text;
+      widget.session.user.attributes["lastName"] = lastNameController.text;
+      widget.session.updateUser().then((value) =>
+      Scaffold.of(context).showSnackBar(
+          SnackBar(content: Text(value ? "Information updated" : "Error updating information"),))
+      );},
+    child: Icon(Icons.save),
+    backgroundColor: Colors.blueAccent,
+    )),
       bottomNavigationBar: BottomNavigationBar(
           onTap: _onItemTapped,
+          currentIndex: 1,
           items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
               icon: Icon(Icons.home),

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:harpokrat/entities/Password.dart';
-import 'package:hclw_flutter/secret.dart' as hclw_secret;
 
 import 'passwd_list.dart';
-import '../preferences.dart';
+import 'preferences.dart';
 import '../session.dart';
 
 
@@ -34,7 +33,7 @@ class PasswordViewPage extends State<PasswordView> {
         break;
     }
     if (page != null)
-      Navigator.push(context, page);
+      Navigator.pushReplacement(context, page);
   }
 
   @override
@@ -75,7 +74,10 @@ class PasswordViewPage extends State<PasswordView> {
               RaisedButton(color: Colors.red,
                 textColor: Colors.white,
                 child: Text("Delete password"),
-              onPressed: () => widget.session.deletePassword(widget.password),)
+              onPressed: () {
+                widget.session.deletePassword(widget.password)
+                    .then((value) => Navigator.of(context).pop());
+                },)
             ],
           )
       ),
@@ -96,16 +98,18 @@ class PasswordViewPage extends State<PasswordView> {
             ),
           ]
       ),
-        floatingActionButton: FloatingActionButton(
+        floatingActionButton: Builder(builder: (context) => FloatingActionButton(
           onPressed: () {
             widget.password.secret.name = nameTextController.text;
             widget.password.secret.domain = domainTextController.text;
             widget.password.secret.login = loginTextController.text;
             widget.password.secret.password = passwordTextController.text;
-            widget.session.updatePassword(widget.password);},
+            widget.session.updatePassword(widget.password)
+                .then((value) => Scaffold.of(context)
+                .showSnackBar(SnackBar(content: Text(value ? "Password updated": "Error when updating password"),)));},
           child: Icon(Icons.save),
           backgroundColor: Colors.blueAccent,
-        )
+        ))
 
     );
   }

@@ -1,21 +1,38 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:harpokrat/views/preferences.dart';
 import 'package:harpokrat/views/passwd_list.dart';
 import 'package:harpokrat/session.dart';
 import 'package:harpokrat/views/subscribe.dart';
+import 'package:harpokrat/views/user_information.dart';
 
-void main() => runApp(new MyApp());
+void main() => new MyApp();
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final Map<String, dynamic> routes = {
+      "password_list": (x) => new PasswordListState(session: x),
+      "user_informations": (x) => new UserInformationState(session: x),
+      "preferences": (x) => new PreferenceState(session: x)
+    };
     return new MaterialApp(
       title: 'Harpokrat mobile client',
       theme: new ThemeData(
         accentColor: Colors.blueAccent,
         backgroundColor: Colors.black
       ),
-      home: new MyHomePage(title: 'Harpokrat'),
+      initialRoute: "/",
+      onGenerateRoute: (setting) {
+        if (routes[setting.name] == null)
+          print("What ? ${setting.name}");
+        return CupertinoPageRoute(
+          builder: (context) =>  routes[setting.name](setting.arguments)
+        );
+      },
+      home: new MyHomePage(title: 'Harpokrat password manager'),
     );
   }
 }
@@ -89,16 +106,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void launchPasswordList() {
-    Navigator.push(context,
-      new MaterialPageRoute(builder: (ctxt) => new PasswordListState(session: widget.session)),);
-    print("New page launched");
+    setState(() {
       _loading = false;
+    });
+    Navigator.pushNamed(context, "password_list", arguments: widget.session);
   }
 
   void launchSubscribePage() {
     Navigator.push(context,
       new MaterialPageRoute(builder: (ctxt) => new SubscribeState(session: widget.session)),);
-    print("New page launched");
   }
 
   @override
@@ -125,16 +141,18 @@ class _MyHomePageState extends State<MyHomePage> {
             children: <Widget>[
               Expanded(
                 child: Image(image: AssetImage("images/HPKLogo.png"))),
-              TextFormField(
+              Text("HPK", style: TextStyle(fontSize: 80)),
+              TextField(
+                autofocus: true,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                  icon: Icon(Icons.account_box),
                   hintText: 'Please enter your email address',
                 ),
                 controller: emailController,
               ),
-              TextFormField(
+              TextField(
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                  icon: Icon(Icons.vpn_key),
                   hintText: 'Please enter your password',
                 ),
                 obscureText: true,
@@ -145,7 +163,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   style: TextStyle(
                       color: Colors.blueAccent,
                       decoration: TextDecoration.underline),
-                textScaleFactor: 1,),
+                textScaleFactor: 1.3,),
                 onTap: launchSubscribePage,
               ),
               if (_loading)

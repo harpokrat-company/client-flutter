@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:harpokrat/views/user_information.dart';
 
-import 'views/passwd_list.dart';
-import 'session.dart';
+import 'passwd_list.dart';
+import '../session.dart';
 
 
 class PreferenceState extends StatefulWidget {
@@ -27,15 +27,16 @@ class PreferencePage extends State<PreferenceState> {
     var page;
     switch (index) {
       case 0:
-        page = new MaterialPageRoute(builder: (ctxt) => new PasswordListState(session: widget.session));
+        page = "password_list";
         break;
       case 1:
-        page = new MaterialPageRoute(builder: (ctxt) => new UserInformationState(session: widget.session));
+        page = "user_informations";
         break;
+      default:
+        return;
     }
-    Navigator.push(context, page);
+    Navigator.popAndPushNamed(context, page, arguments: widget.session);
   }
-
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -63,6 +64,7 @@ class PreferencePage extends State<PreferenceState> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         onTap: _onItemTapped,
+          currentIndex: 2,
           items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
               icon: Icon(Icons.home),
