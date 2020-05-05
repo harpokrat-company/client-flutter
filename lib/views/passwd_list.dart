@@ -9,7 +9,7 @@ import 'package:harpokrat/views/password_view.dart';
 import 'package:harpokrat/views/user_information.dart';
 
 
-import 'preferences.dart';
+import '../preferences.dart';
 
 
 

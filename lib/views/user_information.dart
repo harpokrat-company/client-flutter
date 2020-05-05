@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'passwd_list.dart';
-import 'preferences.dart';
+import '../preferences.dart';
 import '../session.dart';
 
 

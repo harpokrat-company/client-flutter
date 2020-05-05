@@ -1,13 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:harpokrat/views/preferences.dart';
+import 'package:harpokrat/preferences.dart';
 import 'package:harpokrat/views/passwd_list.dart';
 import 'package:harpokrat/session.dart';
 import 'package:harpokrat/views/subscribe.dart';
 import 'package:harpokrat/views/user_information.dart';
 
-void main() => new MyApp();
+void main() => runApp(new MyApp());
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -26,8 +25,6 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: "/",
       onGenerateRoute: (setting) {
-        if (routes[setting.name] == null)
-          print("What ? ${setting.name}");
         return CupertinoPageRoute(
           builder: (context) =>  routes[setting.name](setting.arguments)
         );

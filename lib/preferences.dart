@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:harpokrat/views/user_information.dart';
 
-import 'passwd_list.dart';
-import '../session.dart';
+import 'views/passwd_list.dart';
+import 'session.dart';
 
 
 class PreferenceState extends StatefulWidget {
