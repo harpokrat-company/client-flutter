@@ -1,10 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:harpokrat/preferences.dart';
+import 'package:harpokrat/views/preferences.dart';
 import 'package:harpokrat/views/passwd_list.dart';
-import 'package:harpokrat/session.dart';
+import 'package:harpokrat/controler/session.dart';
 import 'package:harpokrat/views/subscribe.dart';
 import 'package:harpokrat/views/user_information.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_login/flutter_login.dart';
+
+import 'model/User.dart';
+
+
 
 void main() => runApp(new MyApp());
 
@@ -13,15 +19,64 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> routes = {
+      "main": (x) => new MyHomePage(),
       "password_list": (x) => new PasswordListState(session: x),
       "user_informations": (x) => new UserInformationState(session: x),
       "preferences": (x) => new PreferenceState(session: x)
     };
+    final hpkBlue = Color.fromARGB(255, 56, 103, 143);
     return new MaterialApp(
       title: 'Harpokrat mobile client',
-      theme: new ThemeData(
-        accentColor: Colors.blueAccent,
-        backgroundColor: Colors.black
+      theme: ThemeData(
+      primarySwatch: Colors.blueGrey,
+        buttonColor: hpkBlue,
+        primaryColor: hpkBlue,
+        accentColor: hpkBlue,
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+
+          fillColor: hpkBlue.withOpacity(.1),
+          enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: hpkBlue, width: 1),
+              gapPadding: 20,
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(5.0),
+                top: Radius.circular(5.0),
+              )
+          ),
+          contentPadding: EdgeInsets.zero,
+          errorStyle: TextStyle(
+            backgroundColor: Colors.redAccent,
+            color: Colors.black,
+          ),
+          border: OutlineInputBorder(
+              borderSide: BorderSide(color: hpkBlue, width: 1),
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(5.0),
+                top: Radius.circular(5.0),
+              )
+          ),
+
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: hpkBlue,
+          splashColor: hpkBlue,
+          hoverColor: Colors.yellow,
+          focusColor: hpkBlue
+        ),
+        cursorColor: Colors.grey,
+        textTheme: TextTheme(
+          display2: TextStyle(
+            fontFamily: 'OpenSans',
+            fontSize: 45.0,
+            color: Colors.orange,
+          ),
+          button: TextStyle(
+            fontFamily: 'OpenSans',
+          ),
+          subhead: TextStyle(fontFamily: 'NotoSans'),
+          body1: TextStyle(fontFamily: 'NotoSans'),
+        ),
       ),
       initialRoute: "/",
       onGenerateRoute: (setting) {
@@ -109,72 +164,109 @@ class _MyHomePageState extends State<MyHomePage> {
     Navigator.pushNamed(context, "password_list", arguments: widget.session);
   }
 
+  _launchURL() async {
+    const url = 'https://www.harpokrat.com/login/forgot-password';
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
   void launchSubscribePage() {
     Navigator.push(context,
       new MaterialPageRoute(builder: (ctxt) => new SubscribeState(session: widget.session)),);
   }
 
+  Future<String> _authUser(LoginData data) {
+    print('Name: ${data.name}, Password: ${data.password}');
+    var future = widget.session.connectUser(data.name, data.password);
+    return future.then((value) => value ? null: "cannot connect user");
+  }
+
+  Future<String> _registerUser(LoginData data) {
+    print('Name: ${data.name}, Password: ${data.password}');
+    var future = widget.session.createUser(new User(data.name, data.password));
+    return future.then((value) => value ? _authUser(data) : "cannot create user");
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hpkBlue = Color.fromARGB(255, 56, 103, 143);
+
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
-    return new Scaffold(
-      key: this._errorScaffoldKey,
-        appBar: new AppBar(
-          // Here we take the value from the MyHomePage object that was created by
-          // the App.build method, and use it to set our appbar title.
-          title: new Text(widget.title),
-        ),
-        body: new Center(
+    return FlutterLogin(
+      title: 'Harpokrat',
+      logo: 'images/HPKLogo.png',
+      onLogin: _authUser,
+      onSignup: _registerUser,
+      onSubmitAnimationCompleted: () {
+        Navigator.pushReplacementNamed(context, "password_list",
+            arguments: widget.session);
+      },
+      messages: LoginMessages(
 
-          // Center is a layout widget. It takes a single child and positions it
-          // in the middle of the parent.
-          child: new Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Expanded(
-                child: Image(image: AssetImage("images/HPKLogo.png"))),
-              Text("HPK", style: TextStyle(fontSize: 80)),
-              TextField(
-                autofocus: true,
-                decoration: InputDecoration(
-                  icon: Icon(Icons.account_box),
-                  hintText: 'Please enter your email address',
-                ),
-                controller: emailController,
+          recoverPasswordDescription: "We will send you a link to cha"
+      ),
+      onRecoverPassword: null,
+      theme: LoginTheme(
+        primaryColor: hpkBlue,
+        accentColor: hpkBlue.withOpacity(0),
+        errorColor: Colors.redAccent,
+        titleStyle: TextStyle(
+          color: Colors.grey.shade900,
+          fontFamily: 'Quicksand',
+          letterSpacing: 4,
+        ),
+        bodyStyle: TextStyle(
+          color: Colors.black,
+          
+        ),
+        pageColorDark: hpkBlue,
+        pageColorLight: hpkBlue,
+        cardTheme: CardTheme(
+        color: Colors.white,
+        elevation: 5,
+          margin: EdgeInsets.all(25),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        ),
+          inputTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: hpkBlue.withOpacity(.1),
+              enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: hpkBlue, width: 1),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(5.0),
+                    top: Radius.circular(5.0),
+                  )
               ),
-              TextField(
-                decoration: InputDecoration(
-                  icon: Icon(Icons.vpn_key),
-                  hintText: 'Please enter your password',
-                ),
-                obscureText: true,
-                controller: passwordController,
+              contentPadding: EdgeInsets.zero,
+              errorStyle: TextStyle(
+                backgroundColor: Colors.redAccent,
+                color: Colors.black,
               ),
-              InkWell (
-                child: Text("I don't have an account",
-                  style: TextStyle(
-                      color: Colors.blueAccent,
-                      decoration: TextDecoration.underline),
-                textScaleFactor: 1.3,),
-                onTap: launchSubscribePage,
-              ),
-              if (_loading)
-                CircularProgressIndicator()
-              else
-                RaisedButton(
-                    onPressed: connectUser,
-                    child: const Text(
-                        'Log in',
-                        style: TextStyle(fontSize: 20)
-                    )),
-            ],
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: hpkBlue, width: 1),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(5.0),
+                  top: Radius.circular(5.0),
+                )
+            ),
           ),
-        )
+        buttonTheme: LoginButtonTheme(
+          splashColor: Colors.white,
+          backgroundColor: hpkBlue,
+          highlightColor: Colors.blueAccent,
+          elevation: 1,
+          highlightElevation: 6.0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5))
+        ),
+      ),
     );
   }
 }

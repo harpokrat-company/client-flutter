@@ -1,15 +1,13 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
-import 'package:harpokrat/entities/Password.dart';
-import 'package:harpokrat/session.dart';
+
+import 'package:harpokrat/model/Password.dart';
+import 'package:harpokrat/controler/session.dart';
+import 'package:harpokrat/views/password_search.dart';
 import 'package:harpokrat/views/password_view.dart';
-import 'package:harpokrat/views/user_information.dart';
 
 
-import '../preferences.dart';
 
 
 
@@ -33,14 +31,16 @@ class PasswordListState extends StatefulWidget {
 
 class PasswordList extends State<PasswordListState> {
   ListView listView;
+  List<Password> passwordList;
   bool loaded = false;
   bool loading = false;
 
-  Future<Null> loadPassword() {
+  Future<Null> loadPassword() async {
 
     this.loading = true;
     return widget.loadPassword().then((onValue) {
       setState(() {
+        this.passwordList = onValue;
         this.loadWidget(onValue);
         this.loading = false;
       });
@@ -59,7 +59,7 @@ class PasswordList extends State<PasswordListState> {
       default:
         return;
     }
-    Navigator.popAndPushNamed(context, page, arguments: widget.session);
+    Navigator.pushReplacementNamed(context, page, arguments: widget.session);
   }
 
   void _showCreatePasswordDialog() {
@@ -182,6 +182,14 @@ class PasswordList extends State<PasswordListState> {
       resizeToAvoidBottomInset: false,
         appBar: new AppBar(
           title: new Text("My passwords"),
+          leading: new MaterialButton(
+            child: Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.popAndPushNamed(context, "main", arguments: widget.session),
+          ),
+          actions: [IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () => showSearch(context: context, delegate: PasswordSearchDelegate(this.passwordList, widget.session)),
+          )],
         ),
         body: RefreshIndicator(
             onRefresh: _refresh,

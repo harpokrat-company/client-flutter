@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'passwd_list.dart';
-import '../preferences.dart';
-import '../session.dart';
+import '../controler/session.dart';
 
 
 class UserInformationState extends StatefulWidget {
@@ -35,7 +33,7 @@ class UserInformationPage extends State<UserInformationState> {
       default:
         return;
     }
-    Navigator.popAndPushNamed(context, page, arguments: widget.session);
+    Navigator.pushReplacementNamed(context, page, arguments: widget.session);
   }
 
   Future<bool> fetchUserInfo() async {
@@ -62,6 +60,9 @@ class UserInformationPage extends State<UserInformationState> {
     return new Scaffold(
       appBar: new AppBar(
         title: new Text("My informations"),
+        leading: MaterialButton(child: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.popAndPushNamed(context, "main", arguments: widget.session),
+        ),
       ),
       body: Center(
         child: !widget.infoFetched ? CircularProgressIndicator() : Column(
@@ -87,7 +88,7 @@ class UserInformationPage extends State<UserInformationState> {
           ],
         )
       ),
-      floatingActionButton: Builder (builder: (context) => FloatingActionButton(
+      floatingActionButton: Builder (builder: (context) => FloatingActionButton.extended(
         onPressed: () {
       widget.session.user.attributes["firstName"] = firstNameController.text;
       widget.session.user.attributes["lastName"] = lastNameController.text;
@@ -95,7 +96,8 @@ class UserInformationPage extends State<UserInformationState> {
       Scaffold.of(context).showSnackBar(
           SnackBar(content: Text(value ? "Information updated" : "Error updating information"),))
       );},
-    child: Icon(Icons.save),
+        label: Text("Save"),
+    icon: Icon(Icons.save),
     backgroundColor: Colors.blueAccent,
     )),
       bottomNavigationBar: BottomNavigationBar(

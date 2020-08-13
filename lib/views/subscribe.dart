@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-import '../entities/User.dart';
-import '../session.dart';
+import '../model/User.dart';
+import '../controler/session.dart';
 
 class SubscribeState extends StatefulWidget {
   SubscribeState({Key key, @required session,this.title}) : super(key: key);

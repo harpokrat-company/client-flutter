@@ -1,10 +1,15 @@
-import 'package:harpokrat/entities/Password.dart';
+import 'package:harpokrat/model/Password.dart';
 import 'package:http/http.dart' as http;
-import 'package:json_api/json_api.dart' as json_api;
+import 'package:json_api/client.dart' as json_api;
 import 'package:hclw_flutter/hclw_flutter.dart' as hclw;
 import 'package:hclw_flutter/secret.dart' as hclw_secret;
+import 'package:json_api/client.dart';
+import 'package:json_api/document.dart';
+import 'package:json_api/http.dart';
+import 'package:json_api/query.dart';
+import 'package:json_api/routing.dart';
 
-import 'entities/User.dart';
+import '../model/User.dart';
 
 const api_version = "v1";
 
@@ -13,6 +18,7 @@ class Session {
   String _port;
   User user;
   json_api.JsonApiClient jsonApiClient;
+  json_api.RoutingClient jsonRootingClient;
   hclw.HclwFlutter lib;
   Map<String, String> _header = {
   };
@@ -21,17 +27,21 @@ class Session {
   Session(this._url, this._port) {
     lib = new hclw.HclwFlutter();
     final httpClient = http.Client();
-    this.jsonApiClient = json_api.JsonApiClient(httpClient);
+    final routing = StandardRouting(Uri.parse('${this._url}:${this._port}/$api_version'));
+    final httpHandler = LoggingHttpHandler(DartHttp(httpClient));
+
+    this.jsonApiClient = json_api.JsonApiClient(httpHandler);
+    this.jsonRootingClient = RoutingClient(json_api.JsonApiClient(httpHandler), routing);
   }
 
   Future<bool> connectUser(String email, String password) async {
     String basicAuth = lib.getBasicAuth(email, password);
     user = User(email, password);
     this._header["Authorization"] = basicAuth;
-    final path = "${this._url}:${this._port}/$api_version/json-web-tokens";
-    final authToken = Uri.parse(path);
-    final rsc = json_api.Resource("user", null, attributes: {"email": email, "password": password});
-    final response = await this.jsonApiClient.createResource(authToken, rsc, headers: this._header);
+    print(basicAuth);
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/json-web-tokens");
+    final rsc = Resource("users", null, attributes: {"email": email, "password": password});
+    final response = await this.jsonApiClient.createResourceAt(uri, rsc, headers: this._header);
     if (response.isFailed) {
       return false;
     }
@@ -56,10 +66,10 @@ class Session {
   }
 
 
-  Future<json_api.Response<json_api.ResourceCollectionData>> fetchCollection(String route, {String arg}) async {
+  Future<json_api.Response<ResourceCollectionData>> fetchCollection(String route, {String arg, QueryParameters queryParameters}) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/$route" + (arg == null ? "": "/$arg"));
-    final response = await this.jsonApiClient.fetchCollection(uri, headers: this._header);
+    final response = await this.jsonApiClient.fetchCollectionAt(uri, headers: this._header, parameters: queryParameters);
     if (response.isFailed) {
       return null;
     }
@@ -69,10 +79,10 @@ class Session {
  *  Fetch resources from the server
  *
  */
-  Future<json_api.Response<json_api.ResourceData>> fetchResource(String route, {String arg}) async {
+  Future<json_api.Response<ResourceData>> fetchResource(String route, {String arg}) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/$route" + (arg == null ? "": "/$arg"));
-    final response = await this.jsonApiClient.fetchResource(uri, headers: this._header);
+    final response = await this.jsonApiClient.fetchResourceAt(uri, headers: this._header);
     if (response.isFailed) {
       return null;
     }
@@ -85,9 +95,9 @@ class Session {
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets");
 
     final blob = createBlob(url, email, password);
-    final resource = json_api.Resource("secrets", "",
-      attributes: {"content": blob}, toOne: {"owner": json_api.Identifier("users", user.id)});
-    final test = await this.jsonApiClient.createResource(uri, resource, headers: this._header);
+    final resource = Resource("secrets", "",
+      attributes: {"content": blob}, toOne: {"owner": Identifier("users", user.id)});
+    final test = await this.jsonApiClient.createResourceAt(uri, resource, headers: this._header);
     return test.isSuccessful;
   }
 
@@ -96,10 +106,10 @@ class Session {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets/${password.id}");
 
-    final resource = json_api.Resource("secrets", password.id,
+    final resource = Resource("secrets", password.id,
         attributes: {"content": password.secret.serialize(user.password)},
-        toOne: {"owner": json_api.Identifier("users", user.id)});
-    final test = await this.jsonApiClient.updateResource(uri, resource, headers: this._header);
+        toOne: {"owner": Identifier("users", user.id)});
+    final test = await this.jsonApiClient.updateResourceAt(uri, resource, headers: this._header);
     return test.isSuccessful;
   }
 
@@ -107,7 +117,7 @@ class Session {
   Future<bool> deletePassword(Password password) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets/${password.id}");
-    final test = await this.jsonApiClient.deleteResource(uri, headers: this._header);
+    final test = await this.jsonApiClient.deleteResourceAt(uri, headers: this._header);
     return test.isSuccessful;
   }
 
@@ -117,12 +127,11 @@ class Session {
    */
   Future<bool> createUser(User user) async {
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/users");
-
-    final resource = json_api.Resource("users", "",
+    final resource = Resource("users", "",
         attributes: {"email": user.email, "password": lib.getDerivedKey(user.password),
-          "firstName": user.attributes["firstName"],
-          "lastName": user.attributes["lastName"]});
-    final test = await this.jsonApiClient.createResource(uri, resource);
+          "firstName": user.attributes != null ? user.attributes["firstName"]: "",
+          "lastName": user.attributes != null ? user.attributes["lastName"]: ""});
+    final test = await this.jsonApiClient.createResourceAt(uri, resource);
     return test.isSuccessful;
   }
 
@@ -130,12 +139,12 @@ class Session {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
 
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/users/${user.id}");
-    final resource = json_api.Resource("users", user.id,
+    final resource = Resource("users", user.id,
         attributes: {"email": user.email, "password": lib.getDerivedKey(user.password),
       "firstName": user.attributes["firstName"],
       "lastName": user.attributes["lastName"]});
 
-    final res = await this.jsonApiClient.updateResource(uri, resource, headers: _header);
+    final res = await this.jsonApiClient.updateResourceAt(uri, resource, headers: _header);
     return res.isSuccessful;
   }
 
@@ -153,12 +162,11 @@ class Session {
   }
 
   Future<List<Password>> getPassword() async {
-    final response = await fetchCollection("secrets");
+    QueryParameters queryParameters = QueryParameters({"filter[owner.id]": this.user.id});
+    final response = await fetchCollection("secrets", queryParameters: queryParameters);
     List<Password> res = [];
     for (var secret in response.data.collection) {
       final String encryptedSecret = secret.attributes["content"];
-      if ((secret.relationships["owner"] as json_api.ToOne).linkage.id != this.user.id)
-        continue;
         final decryptedSecret = new hclw_secret.Secret(
             lib, content: encryptedSecret, key: user.password);
         res.add(Password(decryptedSecret, secret.id));

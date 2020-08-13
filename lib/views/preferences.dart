@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:harpokrat/views/user_information.dart';
 
-import 'views/passwd_list.dart';
-import 'session.dart';
+import '../controler/session.dart';
 
 
 class PreferenceState extends StatefulWidget {
@@ -35,7 +33,7 @@ class PreferencePage extends State<PreferenceState> {
       default:
         return;
     }
-    Navigator.popAndPushNamed(context, page, arguments: widget.session);
+    Navigator.pushReplacementNamed(context, page, arguments: widget.session);
   }
   @override
   Widget build(BuildContext context) {
@@ -43,6 +41,9 @@ class PreferencePage extends State<PreferenceState> {
     return new Scaffold(
       appBar: new AppBar(
         title: new Text("My preferences"),
+        leading: MaterialButton(child: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.popAndPushNamed(context, "main", arguments: widget.session),
+        ),
       ),
       body: Center(
         child: Column(
