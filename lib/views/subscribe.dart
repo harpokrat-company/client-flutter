@@ -2,15 +2,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:harpokrat/recaptcha_v2.dart';
 
 import '../model/User.dart';
-import '../controler/session.dart';
+import '../controller/session.dart';
 
 class SubscribeState extends StatefulWidget {
-  SubscribeState({Key key, @required session,this.title}) : super(key: key);
+  SubscribeState({Key key, @required this.session, this.title}) : super(key: key);
 
   final String title;
-  final Session session = Session('https://api.harpokrat.com', "443");
+  Session session;
 
   @override
   SubscribePage createState() {
@@ -19,140 +20,19 @@ class SubscribeState extends StatefulWidget {
 
 }
 
-
 class SubscribePage extends State<SubscribeState> {
-  final firstNameController = TextEditingController();
-  final lastNameController = TextEditingController();
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
-
-  bool isCreatingUser = false;
-
-  void createUser() {
-    if (passwordController.text != confirmPasswordController.text) {
-      showDialog(context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text("Error"),
-              content: Text("The passwords must be the same"),
-              actions: <Widget>[
-                FlatButton(
-                  child: Text("Ok"),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                )
-              ],
-            );
-          });
-      return;
-    }
-    final user = User(emailController.text, passwordController.text);
-    user.attributes.addAll({
-      "firstName": firstNameController.text,
-      "lastName": lastNameController.text
-    });
-    final willUserCreated = widget.session.createUser(user);
-    willUserCreated.then((isUserCreated) {
-      if (isUserCreated) {
-        print("USER created");
-        showDialog(context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text("Success"),
-                content: Text("User ${user.email} created"),
-                actions: <Widget>[
-                  FlatButton(
-                    child: Text("Ok"),
-                    onPressed: () {
-                      isCreatingUser = true;
-                      Navigator.of(context).pop();
-                    },
-                  )
-                ],
-              );
-            });
-        // Navigator.of(context).pop();
-      }
-      else
-        showDialog(context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text("Error"),
-                content: Text("The server refused to create the user"),
-                actions: <Widget>[
-                  FlatButton(
-                    child: Text("Ok"),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                  )
-                ],
-              );
-            });
-    });
-    isCreatingUser = true;
-  }
+  RecaptchaV2Controller recaptchaV2Controller = RecaptchaV2Controller();
 
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
     return new Scaffold(
         body: new Center(
-          // Center is a layout widget. It takes a single child and positions it
-          // in the middle of the parent.
-          child: new Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Expanded(
-                  child: Image(image: AssetImage("images/HPKLogo.png"))),
-              TextFormField(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                  hintText: 'Please enter your first name',
-                ),
-                controller: firstNameController,
-              ),
-              TextFormField(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                  hintText: 'Please enter your last name',
-                ),
-                controller: lastNameController,
-              ),
-
-              TextFormField(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                  hintText: 'Please enter your email address',
-                ),
-                controller: emailController,
-              ),
-              TextFormField(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                  hintText: 'Please enter your password',
-                ),
-                obscureText: true,
-                controller: passwordController,
-              ),
-              TextFormField(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                  hintText: 'Please confirm your password',
-                ),
-                obscureText: true,
-                controller: confirmPasswordController,
-              ),
-              isCreatingUser ?  CircularProgressIndicator(): RaisedButton(
-                  onPressed: createUser,
-                  child: const Text(
-                      'Subscribe',
-                      style: TextStyle(fontSize: 20)
-                  ))
-            ],
-          ),
+          child: RecaptchaV2(
+            apiKey : widget.session.captchaKey,
+            controller: recaptchaV2Controller,
+            session: widget.session,
+          )
         )
     );
 

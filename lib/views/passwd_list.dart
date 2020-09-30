@@ -3,7 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
 import 'package:harpokrat/model/Password.dart';
-import 'package:harpokrat/controler/session.dart';
+import 'package:harpokrat/controller/session.dart';
+import 'package:harpokrat/views/create_element.dart';
 import 'package:harpokrat/views/password_search.dart';
 import 'package:harpokrat/views/password_view.dart';
 
@@ -23,6 +24,7 @@ class PasswordListState extends StatefulWidget {
   }
 
   Future<List<Password>> loadPassword() async {
+    await session.getPersonalInfo();
     return this.session.getPassword();
   }
 
@@ -62,61 +64,6 @@ class PasswordList extends State<PasswordListState> {
     Navigator.pushReplacementNamed(context, page, arguments: widget.session);
   }
 
-  void _showCreatePasswordDialog() {
-    final nameController = TextEditingController();
-    final loginController = TextEditingController();
-    final passwordController = TextEditingController();
-    showDialog(context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text("Create new password"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            TextField(
-              decoration: InputDecoration(
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                hintText: 'Enter name',
-              ),
-              controller: nameController,
-            ),
-            TextFormField(
-              decoration: InputDecoration(
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                hintText: 'Enter login',
-              ),
-              controller: loginController,
-            ),
-            TextFormField(
-              decoration: InputDecoration(
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                hintText: 'Enter password',
-              ),
-              obscureText: true,
-              controller: passwordController,
-            )
-          ],
-        ),
-          actions: <Widget>[
-            FlatButton(
-              child: Text("Cancel"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            FlatButton(
-              child: Text("Save"),
-              onPressed: () {
-                widget.session.createPassword(nameController.text,
-                    loginController.text,
-                    passwordController.text);
-                Navigator.of(context).pop();
-              },
-            )
-          ],
-      );
-    });
-  }
 
 
   Future<Null> _refresh() {
@@ -173,6 +120,21 @@ class PasswordList extends State<PasswordListState> {
     this.loaded = true;
   }
 
+  ListView loadGroups() {
+    return ListView.builder(
+        padding: const EdgeInsets.all(8.0),
+        itemCount: passwordList.length,
+        itemBuilder: (BuildContext context, int index) {
+          return Container(
+              height: 144,
+              child: ExpansionTile(
+                title: Text("PLOP"),
+
+              ));
+        }
+    );
+  }
+
   // This widget is the root of my page
   @override
   Widget build(BuildContext context) {
@@ -180,6 +142,9 @@ class PasswordList extends State<PasswordListState> {
       this.loadPassword();
     return new Scaffold(
       resizeToAvoidBottomInset: false,
+        drawer: Drawer(
+          child: Text("PLOP")
+        ),
         appBar: new AppBar(
           title: new Text("My passwords"),
           leading: new MaterialButton(
@@ -212,7 +177,7 @@ class PasswordList extends State<PasswordListState> {
             ]
         ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showCreatePasswordDialog,
+        onPressed: () => Navigator.push(context, new MaterialPageRoute(builder: (ctxt) => new CreateElementState(session: widget.session))),
         child: Icon(Icons.add),
         backgroundColor: Colors.blueAccent,
       ),

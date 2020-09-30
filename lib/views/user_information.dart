@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:harpokrat/views/organization_view.dart';
 
-import '../controler/session.dart';
+import '../controller/session.dart';
 
 
 class UserInformationState extends StatefulWidget {
@@ -46,6 +47,23 @@ class UserInformationPage extends State<UserInformationState> {
     return widget.infoFetched;
   }
 
+  ListView getOrganizations() {
+    final ol = widget.session.user.organizations;
+    return ListView.builder(
+        padding: const EdgeInsets.all(8.0),
+        itemCount: ol.length,
+      itemBuilder: (BuildContext context, int index) {
+          return ListTile(
+            onTap: () => Navigator.push(context, new MaterialPageRoute(builder: (ctxt) => new OrganizationView(session: widget.session, organization: ol[index],))),
+            title: Text(ol[index].name),
+
+            subtitle: ol[index].groups.length != 0 ? Text(ol[index].groups[0].name)
+            : Text("This organization contains no groups")
+          );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     fetchUserInfo();
@@ -84,7 +102,12 @@ class UserInformationPage extends State<UserInformationState> {
                 title: Text("E-mail"),
                 subtitle: Text(widget.session.user.email),
                 trailing: Icon(Icons.more_vert)
+            ),
+            Text("My Organizations"),
+            Expanded(
+              child: getOrganizations(),
             )
+
           ],
         )
       ),

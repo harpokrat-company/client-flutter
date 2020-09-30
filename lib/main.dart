@@ -1,8 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:harpokrat/recaptcha_v2.dart';
 import 'package:harpokrat/views/preferences.dart';
 import 'package:harpokrat/views/passwd_list.dart';
-import 'package:harpokrat/controler/session.dart';
+import 'package:harpokrat/controller/session.dart';
 import 'package:harpokrat/views/subscribe.dart';
 import 'package:harpokrat/views/user_information.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -93,7 +94,7 @@ class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
 
   final String title;
-  Session session = Session('https://api.harpokrat.com', "443");
+  Session session = Session('https://api.dev.harpokrat.com', "443");
 
   @override
   _MyHomePageState createState() => new _MyHomePageState();
@@ -101,6 +102,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   bool _loading = false;
+  String action;
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final _errorScaffoldKey = GlobalKey<ScaffoldState>();
@@ -181,12 +183,16 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<String> _authUser(LoginData data) {
     print('Name: ${data.name}, Password: ${data.password}');
     var future = widget.session.connectUser(data.name, data.password);
+    action = "login";
     return future.then((value) => value ? null: "cannot connect user");
   }
 
   Future<String> _registerUser(LoginData data) {
+
     print('Name: ${data.name}, Password: ${data.password}');
+     // var future = widget.session.getCaptchaKey();
     var future = widget.session.createUser(new User(data.name, data.password));
+    action = "register";
     return future.then((value) => value ? _authUser(data) : "cannot create user");
   }
 
@@ -206,8 +212,11 @@ class _MyHomePageState extends State<MyHomePage> {
       onLogin: _authUser,
       onSignup: _registerUser,
       onSubmitAnimationCompleted: () {
-        Navigator.pushReplacementNamed(context, "password_list",
+        if (action == "login")
+          Navigator.pushReplacementNamed(context, "password_list",
             arguments: widget.session);
+        else
+          launchSubscribePage();
       },
       messages: LoginMessages(
 

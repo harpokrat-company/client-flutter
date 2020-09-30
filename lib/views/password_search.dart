@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:harpokrat/model/Password.dart';
-import 'package:harpokrat/controler/session.dart';
+import 'package:harpokrat/controller/session.dart';
 import 'package:harpokrat/views/password_view.dart';
 
 

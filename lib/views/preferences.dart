@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../controler/session.dart';
+import '../controller/session.dart';
 
 
 class PreferenceState extends StatefulWidget {

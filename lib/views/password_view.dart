@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:harpokrat/model/Password.dart';
 
-import '../controler/session.dart';
+import '../controller/session.dart';
 
 
 class PasswordView extends StatefulWidget {
