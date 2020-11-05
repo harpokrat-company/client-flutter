@@ -22,21 +22,6 @@ void darkModeChanged(bool newState) {
 
 class UserInformationPage extends State<UserInformationState> {
 
-  void _onItemTapped(int index) {
-    var page;
-    switch (index) {
-      case 0:
-        page = "password_list";
-        break;
-      case 2:
-        page = "preferences";
-        break;
-      default:
-        return;
-    }
-    Navigator.pushReplacementNamed(context, page, arguments: widget.session);
-  }
-
   Future<bool> fetchUserInfo() async {
     if (widget.infoFetched == false) {
       final isFetched = await widget.session.getPersonalInfo();
@@ -123,24 +108,6 @@ class UserInformationPage extends State<UserInformationState> {
     icon: Icon(Icons.save),
     backgroundColor: Colors.blueAccent,
     )),
-      bottomNavigationBar: BottomNavigationBar(
-          onTap: _onItemTapped,
-          currentIndex: 1,
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              title: Text('Home'),
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.account_box),
-              title: Text('Personal info'),
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings),
-              title: Text('Settings'),
-            ),
-          ]
-      ),
     );
   }
 }

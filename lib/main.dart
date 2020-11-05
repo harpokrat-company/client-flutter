@@ -1,11 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:harpokrat/recaptcha_v2.dart';
+import 'package:harpokrat/views/mfa_view.dart';
+import 'package:harpokrat/views/organisation_list.dart';
+import 'package:harpokrat/views/organization_view.dart';
 import 'package:harpokrat/views/preferences.dart';
 import 'package:harpokrat/views/passwd_list.dart';
 import 'package:harpokrat/controller/session.dart';
 import 'package:harpokrat/views/subscribe.dart';
 import 'package:harpokrat/views/user_information.dart';
+import 'package:harpokrat/views/user_menu_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_login/flutter_login.dart';
 
@@ -23,7 +26,10 @@ class MyApp extends StatelessWidget {
       "main": (x) => new MyHomePage(),
       "password_list": (x) => new PasswordListState(session: x),
       "user_informations": (x) => new UserInformationState(session: x),
-      "preferences": (x) => new PreferenceState(session: x)
+      "preferences": (x) => new PreferenceState(session: x),
+      "mfa": (x) => new MfaView(session: x),
+      "detail_menu": (x) => new UserView(session: x),
+      "organisation_list": (x) => new OrganisationList(session: x)
     };
     final hpkBlue = Color.fromARGB(255, 56, 103, 143);
     return new MaterialApp(
@@ -188,12 +194,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<String> _registerUser(LoginData data) {
-
     print('Name: ${data.name}, Password: ${data.password}');
-     // var future = widget.session.getCaptchaKey();
-    var future = widget.session.createUser(new User(data.name, data.password));
-    action = "register";
-    return future.then((value) => value ? _authUser(data) : "cannot create user");
+    var futureCaptcha = widget.session.getCaptchaKey().then((site_key) {
+
+      var future = widget.session.createUser(new User(data.name, data.password));
+      action = "register";
+      return future.then((value) => value ? _authUser(data) : "cannot create user");
+    });
+    return futureCaptcha.then((value) => value);
   }
 
   @override

@@ -100,11 +100,8 @@ class  Session {
     return res;
   }
 
-
-  Future<List<Vault>> getVaults() async {
-    var l = new List<String>();
+  Future<List<Vault>> getVaultsFrom(Uri uri) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
-    final uri = Uri.parse("${this._url}:${this._port}/$api_version/users/${user.id}/vaults");
     final response = await this.jsonApiClient.fetchCollectionAt(uri, headers: this._header);
     if (response.isFailed) {
       return null;
@@ -116,8 +113,18 @@ class  Session {
     }
     return res;
   }
+  
+  Future<List<Vault>> getUserVaults() async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/users/${user.id}/vaults");
+    return getVaultsFrom(uri);
+  }
+  
+  Future<List<Vault>> getGroupVaults(Identifier id) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups/${id.id}/vaults");
+    return getVaultsFrom(uri);
+  }
 
-  Future<List<Group>> getGroup(Identifier owner) async {
+  Future<List<Group>> getUserGroup(Identifier owner) async {
     var l = new List<String>();
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/organizations/${owner.id}/groups");
@@ -133,7 +140,7 @@ class  Session {
     return res;
   }
 
-  Future<bool> createGroup(String name, Identifier organisation, Identifier parent) async {
+  Future<bool> createOrganisationGroup(String name, Identifier organisation) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups");
     Resource group = new Resource("groups", "",
@@ -145,6 +152,20 @@ class  Session {
     }
     return true;
   }
+
+  Future<bool> createGroupGroup(String name, Identifier groupId) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups");
+    Resource group = new Resource("groups", "",
+        attributes: {"name": name},
+        toOne: {"group": groupId});
+    final response = await this.jsonApiClient.createResourceAt(uri, group, headers: this._header);
+    if (response.isFailed) {
+      return false;
+    }
+    return true;
+  }
+  
 
   Future<bool> createVault(String name, Identifier owner) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
@@ -159,20 +180,15 @@ class  Session {
     return true;
   }
 
-  Future<bool> addOrganizationMember(String email, Identifier organization) async {
+  Future<bool> addMemberTo(String email, Uri uri) async {
     QueryParameters queryParameters = QueryParameters({"Filter[user.email]": email});
     var uri = Uri.parse("${this._url}:${this._port}/$api_version/users/");
     final collection = await fetchCollection("users", queryParameters: queryParameters);
-
     final l = collection.data.unwrap().where((element) => element.attributes["email"] == email).toList();
     if (l.length < 1)
       return false;
     final id = l[0].id;
-
     this._header["Authorization"] = "bearer ${this.user.jwt}";
-    uri = Uri.parse("${this._url}:${this._port}/$api_version/organizations/${organization.id}/relationships/members");
-
-
     Identifier member = Identifier("users", id);
     final response = await this.jsonApiClient.addToRelationshipAt(uri,
         [member], headers: this._header);
@@ -180,6 +196,16 @@ class  Session {
       return false;
     }
     return true;
+  }
+
+  Future<bool> addOrganizationMember(String email, Identifier owner) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/organizations/${owner.id}/relationships/members");
+    return addMemberTo(email, uri);
+  }
+
+  Future<bool> addGroupMember(String email, Identifier owner) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups/${owner.id}/relationships/members");
+    return addMemberTo(email, uri);
   }
 
   Future<bool> createOrganization(String name, Identifier owner) async {
@@ -209,8 +235,8 @@ class  Session {
 
     var organizations = await getOrganization();
     for (var organization in organizations) {
-      organization.groups = await getGroup(organization.getIdentifier());
-      organization.members = await getMembers(organization.getIdentifier());
+      organization.groups = await getUserGroup(organization.getIdentifier());
+      organization.members = await getOrganisationMembers(organization.getIdentifier());
     }
     this.user.organizations = organizations;
     return true;
@@ -262,7 +288,7 @@ class  Session {
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets/${password.id}");
 
     final resource = Resource("secrets", password.id,
-        attributes: {"content": password.secret.serialize(user.password)},
+        attributes: {"content": password.secret.password(user.password)},
         toOne: {"owner": Identifier("users", user.id)});
     final test = await this.jsonApiClient.updateResourceAt(uri, resource, headers: this._header);
     return test.isSuccessful;
@@ -321,8 +347,9 @@ class  Session {
     secret.password = password;
     secret.domain = url;
     secret.name = url;
+
     secret.login = email;
-    return secret.serialize(user.password);
+    return secret.content;
     // TODO: Update encryption library
     /* var sym_key = hclw_sym_key.SymmetricKey(this.lib);
     sym_key.initializeSymmetric();
@@ -342,27 +369,35 @@ class  Session {
       final String encryptedSecret = secret.attributes["content"];
       final decryptedSecret = new hclw_secret.Secret(
           lib, content: encryptedSecret, key: user.password);
+//      Secret decryptedSecret;
       res.add(Password(decryptedSecret, secret.id));
     }
     return res;
   }
 
-  Future<List<User>> getMembers(Identifier identifier) async {
-    var l = new List<String>();
+  Future<List<User>> getMembersFrom(Uri uri) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
-    final uri = Uri.parse("${this._url}:${this._port}/$api_version/organizations/${identifier.id}/members");
     final response = await this.jsonApiClient.fetchCollectionAt(uri, headers: this._header);
     if (response.isFailed) {
       return [];
     }
     List<User> res = [];
-//    var collection = response.data.unwrap();
     for (var element in response.data.collection) {
       var u = User(element.attributes["email"], "");
       u.id = element.id;
       res.add(u);
     }
     return res;
-
   }
+
+  Future<List<User>> getOrganisationMembers(Identifier identifier) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/organizations/${identifier.id}/members");
+    return getMembersFrom(uri);
+  }
+
+  Future<List<User>> getGroupMembers(Identifier identifier) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups/${identifier.id}/members");
+    return getMembersFrom(uri);
+  }
+
 }

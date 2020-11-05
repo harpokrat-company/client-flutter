@@ -53,7 +53,7 @@ class PasswordList extends State<PasswordListState> {
     var page;
     switch (index) {
       case 1:
-        page = "user_informations";
+        page = "detail_menu";
         break;
       case 2:
         page = "preferences";
@@ -63,8 +63,6 @@ class PasswordList extends State<PasswordListState> {
     }
     Navigator.pushReplacementNamed(context, page, arguments: widget.session);
   }
-
-
 
   Future<Null> _refresh() {
     return this.loadPassword();

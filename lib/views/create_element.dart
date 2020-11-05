@@ -58,8 +58,8 @@ class CreateElementPage extends State<CreateElementState> {
                 onPressed: () {
                   var o = widget.session.user.getOrganization(orgaController.text);
                   if (o != null)
-                  widget.session.createGroup(nameController.text,
-                      o.getIdentifier(), null);
+                  widget.session.createOrganisationGroup(nameController.text,
+                      o.getIdentifier());
                   Navigator.of(context).pop();
                 },
               )

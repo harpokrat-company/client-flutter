@@ -21,10 +21,10 @@ dependencies:
   flutter_login: ^1.0.14
   url_launcher: ^5.4.5
   webview_flutter: ^0.3.4
-
+  flutter_slidable: ^0.5.7
 
   hclw_flutter:
-    path: ../../Harpokrat cryptograpic library/hclw-flutter
+    path: ../../old_hcl/hclw-flutter
 
 dev_dependencies:
   flutter_test:

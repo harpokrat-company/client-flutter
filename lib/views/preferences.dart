@@ -28,7 +28,7 @@ class PreferencePage extends State<PreferenceState> {
         page = "password_list";
         break;
       case 1:
-        page = "user_informations";
+        page = "detail_menu";
         break;
       default:
         return;
