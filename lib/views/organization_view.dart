@@ -93,7 +93,7 @@ class OrganizationViewPage extends State<OrganizationView> {
                 child: Text("Save"),
                 onPressed: () {
                   widget.session.createOrganisationGroup(nameController.text,
-                      widget.organization.getIdentifier());
+                      widget.organization);
                   Navigator.of(context).pop();
                 },
               )
@@ -116,7 +116,8 @@ class OrganizationViewPage extends State<OrganizationView> {
           onTap: () => Navigator.push(context,
               new MaterialPageRoute(
                   builder: (ctxt) => new GroupView(
-                      session: widget.session, group: widget.organization.groups[index])))
+                      session: widget.session, group: widget.organization.groups[index],
+                      organization: widget.organization)))
       );
       },);
   }

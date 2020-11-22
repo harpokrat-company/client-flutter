@@ -70,7 +70,11 @@ class OrganisationListPage extends State<OrganisationList> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
+    return Scaffold(
+        appBar: AppBar(
+          title: Text("My organizations"),
+        ),
+        body: FutureBuilder<bool>(
       future: widget.session.getPersonalInfo(),
       builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -84,6 +88,6 @@ class OrganisationListPage extends State<OrganisationList> {
             return buildFrame(context);
         }
       }
-    );
+    ));
   }
 }

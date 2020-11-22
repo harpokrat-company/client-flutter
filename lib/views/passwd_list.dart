@@ -25,7 +25,7 @@ class PasswordListState extends StatefulWidget {
 
   Future<List<Password>> loadPassword() async {
     await session.getPersonalInfo();
-    return this.session.getPassword();
+    return [];//this.session.getPassword();
   }
 
 }
@@ -88,8 +88,8 @@ class PasswordList extends State<PasswordListState> {
                 children: <Widget>[
                   ListTile(
                     leading: Icon(Icons.security),
-                    title: Text('${passwordList[index].secret.name}'),
-                    subtitle: Text('${passwordList[index].secret.login}'),
+                    title: Text('${passwordList[index].name}'),
+                    subtitle: Text('${passwordList[index].login}'),
                   ),
                   ButtonBarTheme( // make buttons use the appropriate styles for cards
                     child: ButtonBar(
@@ -97,14 +97,14 @@ class PasswordList extends State<PasswordListState> {
                         FlatButton(
                           child: const Text('COPY'),
                           onPressed: () {
-                            Clipboard.setData(new ClipboardData(text: passwordList[index].secret.password));
+                            Clipboard.setData(new ClipboardData(text: passwordList[index].password));
                             Scaffold.of(context).showSnackBar(new SnackBar(content: Text("password copied to clipboard")));
                             },
                         ),
                         FlatButton(
                           child: const Text('SHOW'),
                           onPressed: () { Scaffold.of(context)
-                              .showSnackBar(new SnackBar(content: Text("Your password is ${passwordList[index].secret.password}"))); },
+                              .showSnackBar(new SnackBar(content: Text("Your password is ${passwordList[index].password}"))); },
                         ),
                       ],
                     ),
@@ -116,21 +116,6 @@ class PasswordList extends State<PasswordListState> {
         }
     );
     this.loaded = true;
-  }
-
-  ListView loadGroups() {
-    return ListView.builder(
-        padding: const EdgeInsets.all(8.0),
-        itemCount: passwordList.length,
-        itemBuilder: (BuildContext context, int index) {
-          return Container(
-              height: 144,
-              child: ExpansionTile(
-                title: Text("PLOP"),
-
-              ));
-        }
-    );
   }
 
   // This widget is the root of my page

@@ -1,14 +1,17 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:f_grecaptcha/f_grecaptcha.dart';
+import 'package:harpokrat/views/code_view.dart';
+
 import 'package:harpokrat/views/mfa_view.dart';
 import 'package:harpokrat/views/organisation_list.dart';
-import 'package:harpokrat/views/organization_view.dart';
 import 'package:harpokrat/views/preferences.dart';
 import 'package:harpokrat/views/passwd_list.dart';
 import 'package:harpokrat/controller/session.dart';
-import 'package:harpokrat/views/subscribe.dart';
 import 'package:harpokrat/views/user_information.dart';
 import 'package:harpokrat/views/user_menu_view.dart';
+import 'package:hclw_flutter/symmetrickey.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_login/flutter_login.dart';
 
@@ -19,6 +22,7 @@ import 'model/User.dart';
 void main() => runApp(new MyApp());
 
 class MyApp extends StatelessWidget {
+
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -29,6 +33,7 @@ class MyApp extends StatelessWidget {
       "preferences": (x) => new PreferenceState(session: x),
       "mfa": (x) => new MfaView(session: x),
       "detail_menu": (x) => new UserView(session: x),
+      "code_view": (x) => new CodeView(session: x),
       "organisation_list": (x) => new OrganisationList(session: x)
     };
     final hpkBlue = Color.fromARGB(255, 56, 103, 143);
@@ -116,6 +121,10 @@ class _MyHomePageState extends State<MyHomePage> {
   String errorMessage;
 
 
+
+  Future<void> initPlatformState() async {
+  }
+
   void handleConnection(bool success) {
     if (success)
       this.launchPasswordList();
@@ -181,25 +190,25 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void launchSubscribePage() {
-    Navigator.push(context,
-      new MaterialPageRoute(builder: (ctxt) => new SubscribeState(session: widget.session)),);
-  }
 
   Future<String> _authUser(LoginData data) {
-    print('Name: ${data.name}, Password: ${data.password}');
-    var future = widget.session.connectUser(data.name, data.password);
+    var future = widget.session.connectInitUser(data.name, data.password);
     action = "login";
     return future.then((value) => value ? null: "cannot connect user");
   }
 
-  Future<String> _registerUser(LoginData data) {
+  Future<String> _registerUser(LoginData data) async {
     print('Name: ${data.name}, Password: ${data.password}');
-    var futureCaptcha = widget.session.getCaptchaKey().then((site_key) {
+    final SITE_KEY = "6LfZE9EZAAAAAK7e-A9oK426Ei3m_l_2QKn8mmBQ";
+    var futureCaptcha = FGrecaptcha.verifyWithRecaptcha(SITE_KEY).then((jwt) {
+      var symKey = new SymmetricKey(widget.session.lib);
+      symKey.key = data.password;
+      var future = widget.session.createUser(new User(data.name, data.password, symKey), jwt);
 
-      var future = widget.session.createUser(new User(data.name, data.password));
       action = "register";
       return future.then((value) => value ? _authUser(data) : "cannot create user");
+    }, onError: (e, s){
+      print("Could not verify:\n $e at\n $s");
     });
     return futureCaptcha.then((value) => value);
   }
@@ -220,15 +229,17 @@ class _MyHomePageState extends State<MyHomePage> {
       onLogin: _authUser,
       onSignup: _registerUser,
       onSubmitAnimationCompleted: () {
-        if (action == "login")
-          Navigator.pushReplacementNamed(context, "password_list",
-            arguments: widget.session);
-        else
-          launchSubscribePage();
+        if (action == "login") {
+          if (widget.session.user.mfa)
+            Navigator.pushReplacementNamed(context, "code_view",
+                arguments: widget.session);
+          else
+            Navigator.pushReplacementNamed(context, "detail_menu",
+                arguments: widget.session);
+        }
       },
       messages: LoginMessages(
-
-          recoverPasswordDescription: "We will send you a link to cha"
+          recoverPasswordDescription: "We will send you a link to reset your password"
       ),
       onRecoverPassword: null,
       theme: LoginTheme(
@@ -242,7 +253,6 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         bodyStyle: TextStyle(
           color: Colors.black,
-          
         ),
         pageColorDark: hpkBlue,
         pageColorLight: hpkBlue,

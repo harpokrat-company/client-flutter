@@ -24,14 +24,14 @@ class PasswordViewPage extends State<PasswordView> {
 
   @override
   Widget build(BuildContext context) {
-    var nameTextController = new TextEditingController(text: widget.password.secret.name);
-    var domainTextController = new TextEditingController(text: widget.password.secret.domain);
-    var loginTextController = new TextEditingController(text: widget.password.secret.login);
-    var passwordTextController = new TextEditingController(text: widget.password.secret.password);
+    var nameTextController = new TextEditingController(text: widget.password.name);
+    var domainTextController = new TextEditingController(text: widget.password.domain);
+    var loginTextController = new TextEditingController(text: widget.password.login);
+    var passwordTextController = new TextEditingController(text: widget.password.password);
 
     return new Scaffold(
         appBar: new AppBar(
-          title: new Text(widget.password.secret.name),
+          title: new Text(widget.password.name),
         ),
         body: Center(
             child: SizedBox(
@@ -65,7 +65,7 @@ class PasswordViewPage extends State<PasswordView> {
                             decoration: InputDecoration(
                                 labelText: "Password",
                                 prefixIcon: Icon(Icons.lock),
-                                suffix: MaterialButton(child:Icon(isObscured ? Icons.visibility: Icons.visibility_off),
+                                suffix: MaterialButton(child: Icon(isObscured ? Icons.visibility: Icons.visibility_off),
                                     onPressed: () => {setState(() => {isObscured = !isObscured})})
                             ),
                             controller: passwordTextController),
@@ -83,18 +83,17 @@ class PasswordViewPage extends State<PasswordView> {
         ),
         floatingActionButton: Builder(builder: (context) => FloatingActionButton.extended(
           onPressed: () {
-            widget.password.secret.name = nameTextController.text;
-            widget.password.secret.domain = domainTextController.text;
-            widget.password.secret.login = loginTextController.text;
-            widget.password.secret.password = passwordTextController.text;
-            widget.session.updatePassword(widget.password)
+            widget.password.name = nameTextController.text;
+            widget.password.domain = domainTextController.text;
+            widget.password.login = loginTextController.text;
+            widget.password.password = passwordTextController.text;
+/*            widget.session.updatePassword(widget.password, widget.session.user.getIdentifier(), )
                 .then((value) => Scaffold.of(context)
-                .showSnackBar(SnackBar(content: Text(value ? "Password updated": "Error when updating password"),)));},
+                .showSnackBar(SnackBar(content: Text(value ? "Password updated": "Error when updating password"),)));*/},
           icon: Icon(Icons.save),
           label: Text("Save"),
           backgroundColor: Colors.blueAccent,
         ))
-
     );
   }
 }

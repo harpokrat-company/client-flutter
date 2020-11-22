@@ -2,6 +2,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:harpokrat/controller/session.dart';
+import 'package:harpokrat/views/vault_list.dart';
 import 'package:harpokrat/widget/buttons.dart';
 
 class UserView extends StatefulWidget {
@@ -51,18 +52,17 @@ class UserViewPage extends State<UserView> {
             onTap: () => Navigator.pushNamed(context, "organisation_list", arguments: widget.session),
           ),
           ListTile(
+            title: Text("My Vaults"),
+            subtitle: Text("See your personal vaults"),
+            onTap: () => Navigator.push(context,
+                new MaterialPageRoute(
+                    builder: (ctxt) => new VaultList(
+                        session: widget.session, owner: widget.session.user.asOwner(),)))),
+          ListTile(
             title: Text("Multi factor authentication"),
             subtitle: Text("See and setup the way we can make your connection more secure"),
             onTap: () => Navigator.pushNamed(context, "mfa", arguments: widget.session),
           ),
-          showSheetButton(context, "Example", Column(children: [
-            Text("PLaceholder text"),
-            Icon(Icons.group),
-            ActionChip(
-              label: Text("Action chip"),
-              onPressed: () => null,
-            )
-          ],))
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

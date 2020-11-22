@@ -35,5 +35,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <meta-data android:name="safetynet_api_key"
+            android:value="6LfZE9EZAAAAAK7e-A9oK426Ei3m_l_2QKn8mmBQ"/>
     </application>
 </manifest>

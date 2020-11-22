@@ -25,9 +25,6 @@ class PreferencePage extends State<PreferenceState> {
     var page;
     switch (index) {
       case 0:
-        page = "password_list";
-        break;
-      case 1:
         page = "detail_menu";
         break;
       default:
@@ -70,10 +67,6 @@ class PreferencePage extends State<PreferenceState> {
             BottomNavigationBarItem(
               icon: Icon(Icons.home),
               title: Text('Home'),
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.account_box),
-              title: Text('Personal info'),
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),

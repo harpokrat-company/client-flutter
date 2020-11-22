@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:harpokrat/model/Group.dart';
+import 'package:harpokrat/model/Organization.dart';
+import 'package:harpokrat/views/vault_view.dart';
 import 'package:harpokrat/widget/create_dialog.dart';
 
 
@@ -8,10 +10,11 @@ import '../controller/session.dart';
 
 
 class GroupView extends StatefulWidget {
-  GroupView({Key key, @required this.session, @required this.group}) : super(key: key);
+  GroupView({Key key, @required this.session, @required this.group, @required this.organization}) : super(key: key);
 
   Session session;
   Group  group;
+  Organization organization;
   @override
   State<StatefulWidget> createState() {
     // TODO: implement createState
@@ -77,7 +80,7 @@ class GroupeViewPage extends State<GroupView> {
           onTap: () => Navigator.push(context,
               new MaterialPageRoute(
                   builder: (ctxt) => new GroupView(
-                      session: widget.session, group: widget.group.groups[index]))),
+                      session: widget.session, group: widget.group.groups[index], organization: widget.organization,))),
         );
       },
     );
@@ -93,10 +96,14 @@ class GroupeViewPage extends State<GroupView> {
             icon: Icon(Icons.delete),
             onPressed: () => null,
           ),
-          onTap: () => {}/*Navigator.push(context,
+          onTap: () {
+/*            widget.session.getVaultData(widget.group.vaults[index],
+                widget.group.publicKey.asRSAPublic(), widget.group.privateKey.asRSAPrivate());*/
+            Navigator.push(context,
               new MaterialPageRoute(
-                  builder: (ctxt) => new GroupView(
-                      session: widget.session, group: widget.group.vaults[index])))*/,
+                  builder: (ctxt) => new VaultView(
+                      session: widget.session, vault: widget.group.vaults[index])));
+          },
         );
       },
     );
@@ -124,7 +131,7 @@ class GroupeViewPage extends State<GroupView> {
   }
 
   void onSaveGroup(String groupName) {
-    widget.session.createGroupGroup(groupName, widget.group.getIdentifier());
+    widget.session.createGroupGroup(groupName, widget.group, widget.organization);
   }
 
   Widget buildFrame(BuildContext context) {
@@ -193,7 +200,7 @@ class GroupeViewPage extends State<GroupView> {
                   child: buildGroupList(),
                 ),
                 Center(
-                  child: buildGroupList(),
+                  child: buildVaultList(),
                 ),
                 Center(
                   child: buildMemberList(),

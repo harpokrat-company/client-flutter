@@ -34,6 +34,12 @@ class MfaViewPage extends State<MfaView> {
           ExpansionTile(
             title: Text("Mail"),
             children: [
+              CheckboxListTile(
+                title: Text("Activate"),
+                subtitle: Text("Activate MFA for email"),
+                onChanged: (value) => widget.session.activateMFA(value).then((value) => setState( ()=> null)),
+                value: widget.session.user.mfa,
+              ),
               TextFormField(
                 decoration: InputDecoration(
                     prefixIcon: Icon(Icons.mail),

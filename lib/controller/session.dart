@@ -1,11 +1,22 @@
+import 'dart:ffi';
+
+import 'package:flutter/foundation.dart';
+import 'package:harpokrat/model/EcryptionKey.dart';
 import 'package:harpokrat/model/Group.dart';
 import 'package:harpokrat/model/Organization.dart';
+import 'package:harpokrat/model/Owner.dart';
 import 'package:harpokrat/model/Password.dart';
 import 'package:harpokrat/model/Vault.dart';
+import 'package:hclw_flutter/rsakeypair.dart';
+import 'package:hclw_flutter/rsaprivatekey.dart';
+import 'package:hclw_flutter/rsapublickey.dart';
+import 'dart:math';
+import 'package:hclw_flutter/symmetrickey.dart';
 import 'package:http/http.dart' as http;
 import 'package:json_api/client.dart' as json_api;
 import 'package:hclw_flutter/hclw_flutter.dart' as hclw;
-import 'package:hclw_flutter/secret.dart' as hclw_secret;
+import 'package:hclw_flutter/asecret.dart' as hclw_secret;
+import 'package:hclw_flutter/password.dart' as hclw_password;
 import 'package:json_api/client.dart';
 import 'package:json_api/document.dart';
 import 'package:json_api/http.dart';
@@ -36,7 +47,7 @@ class  Session {
     final httpHandler = LoggingHttpHandler(DartHttp(httpClient));
 
     this.jsonApiClient = json_api.JsonApiClient(httpHandler);
-    this.jsonRootingClient = RoutingClient(json_api.JsonApiClient(httpHandler), routing);
+    this.jsonRootingClient = RoutingClient(json_api.JsonApiClient(  httpHandler), routing);
   }
 
   Future<bool> getCaptchaKey() async {
@@ -47,24 +58,88 @@ class  Session {
       return false;
     }
     Resource r = response.data.unwrap();
-    captchaKey = r.attributes["siteKey"];
+    captchaKey = r.attributes["reCAPTCHA-v2-android"];
     return true;
+  }
+
+  Future<bool> deleteAllUserSecret() async {
+    final response = await fetchCollection("users/${user.id}/secrets");
+    for (var secret in response.data.collection) {
+      deleteSecret(secret.id);
+      }
+    return true;
+  }
+
+  Future<bool> getUserSecret() async {
+    var success = await getEncryptionKeyUser();
+    if (!success)
+      return false;
+    final response = await fetchCollection("users/${user.id}/secrets");
+    bool privateKeyFound = false;
+    for (var secret in response.data.collection) {
+      if (secret.id == user.encryptionKeyId) {
+        user.privateKey = EncryptionKey(
+            secret.unwrap(), lib, decryptionSymmetricKey: user.symmetricKey);
+        privateKeyFound = true;
+        break;
+      }
+    }
+    if (privateKeyFound == false) {
+      return false;
+    }
+    for (var secret in response.data.collection) {
+      if (secret.attributes["private"] == true)
+        user.publicKey = EncryptionKey(secret.unwrap(), lib);
+      else if (secret.id != user.encryptionKeyId)
+        user.groupKeys.add(EncryptionKey(secret.unwrap(), lib, decryptionAsymmetricKey: user.privateKey.asRSAPrivate()));
+    }
+    return true;
+  }
+
+  Future<bool> connectInitUser(String email, String password) async {
+    bool isConnected = await connectUser(email, password);
+    if (!isConnected)
+      return false;
+    return true;
+//    return await getUserSecret();
+  }
+
+  Future<bool> verifyToken(String token) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/secure-actions/${user.mfaId}");
+    final r = Resource(
+      "secure-actions", "", attributes: {"validated": true}
+    );
+    final response = await this.jsonApiClient.createResourceAt(uri, r, headers: this._header, meta: {"token": token});
+    return response.isSuccessful;
   }
 
   Future<bool> connectUser(String email, String password) async {
     String basicAuth = lib.getBasicAuth(email, password);
-    user = User(email, password);
+    user = User(email, password, new SymmetricKey(lib));
+    user.symmetricKey.key = password;
     this._header["Authorization"] = basicAuth;
     print(basicAuth);
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/json-web-tokens");
-    final rsc = Resource("users", null, attributes: {"email": email, "password": password});
+    final rsc = Resource("users", "", attributes: {"email": email, "password": lib.getDerivedKey(password)});
     final response = await this.jsonApiClient.createResourceAt(uri, rsc, headers: this._header);
     if (response.isFailed) {
       return false;
     }
-    final resource = response.data.unwrap();
-    user.jwt = resource.attributes["token"];
-    user.id = resource.toOne["user"].id;
+    var resource;
+    try {
+      resource = response.data.unwrap();
+      user.jwt = resource.attributes["token"];
+      user.id = resource.toOne["user"].id;
+    } catch (e) {
+      resource = response.data.resourceObject;
+      user.jwt = resource.attributes["token"];
+      user.id = resource.relationships["user"].linkage.id;
+    }
+    final mfa = response.data.resourceObject.relationships["mfa"];
+    if (mfa != null) {
+      user.mfa = true;
+      user.mfaId = mfa.toString();//["data"]["id"];
+    }
     return true;
   }
 
@@ -84,20 +159,14 @@ class  Session {
     return res;
   }
 
-  Future<List<Organization>> addOrganization_member() async {
-    var l = new List<String>();
-    this._header["Authorization"] = "bearer ${this.user.jwt}";
-    final uri = Uri.parse("${this._url}:${this._port}/$api_version/users/${user.id}/organizations");
-    final response = await this.jsonApiClient.fetchCollectionAt(uri, headers: this._header);
-    if (response.isFailed) {
-      return null;
+  Future<bool> getVaultData(Vault vault, RSAPublicKey encryptionKey, RSAPrivateKey decryptionKey) async {
+    bool keyFetched = true; //await getEncryptionKeyVault(vault, decryptionKey);
+    if (!keyFetched) {
+      bool keyCreated = await createEncryptionKeyVault(vault, encryptionKey, decryptionKey);
+      if (!keyCreated)
+        return false;
     }
-    List<Organization> res = [];
-    var collection = response.data.unwrap();
-    for (var element in collection) {
-      res.add(Organization(element.attributes["name"], element.id));
-    }
-    return res;
+    return await getPasswordVault(vault);
   }
 
   Future<List<Vault>> getVaultsFrom(Uri uri) async {
@@ -107,25 +176,34 @@ class  Session {
       return null;
     }
     List<Vault> res = [];
-    var collection = response.data.unwrap();
+    var collection = response.data.collection;
     for (var element in collection) {
       res.add(Vault(element.attributes["name"], element.id));
     }
     return res;
   }
-  
+
   Future<List<Vault>> getUserVaults() async {
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/users/${user.id}/vaults");
-    return getVaultsFrom(uri);
+    final vaultList = await getVaultsFrom(uri);
+    for (var vault in vaultList)
+      await deleteVault(vault);
+    return [];
   }
-  
-  Future<List<Vault>> getGroupVaults(Identifier id) async {
-    final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups/${id.id}/vaults");
+
+  Future<List<Vault>> getOwnerVaults(Owner owner) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/${owner.identifier.type}/${owner.identifier.id}/vaults");
+    final vaultList = await getVaultsFrom(uri);
+    return vaultList;
+  }
+
+
+  Future<List<Vault>> getGroupVaults(Group group) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups/${group.id}/vaults");
     return getVaultsFrom(uri);
   }
 
-  Future<List<Group>> getUserGroup(Identifier owner) async {
-    var l = new List<String>();
+  Future<List<Group>> getGroupGroup(Identifier owner) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/organizations/${owner.id}/groups");
     final response = await this.jsonApiClient.fetchCollectionAt(uri, headers: this._header);
@@ -133,51 +211,207 @@ class  Session {
       return [];
     }
     List<Group> res = [];
-//    var collection = response.data.unwrap();
     for (var element in response.data.collection) {
-      res.add(Group(element.attributes["name"], element.id));
+      if (element.attributes["name"] != null) {
+        var group = Group(element.attributes["name"], element.id);
+        var canDecrypt = false;
+        group.groups = await getGroupGroup(group.getIdentifier());
+        if (group.groups.length > 0) {
+          group.privateKey = group.groups[0].privateKey;
+          canDecrypt = true;
+        } else
+          canDecrypt = true; //await getGroupSecrets(group);
+        if (!canDecrypt)
+          res.add(group);
+      }
     }
     return res;
   }
 
-  Future<bool> createOrganisationGroup(String name, Identifier organisation) async {
-    this._header["Authorization"] = "bearer ${this.user.jwt}";
-    final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups");
-    Resource group = new Resource("groups", "",
-        attributes: {"name": name},
-        toOne: {"organization": organisation});
-    final response = await this.jsonApiClient.createResourceAt(uri, group, headers: this._header);
-    if (response.isFailed) {
+  Future<bool> getGroupSecrets(Group group) async {
+    for (final groupKey in user.groupKeys) {
+      if (groupKey.asRSAPrivate().owner == group.id) {
+        group.privateKey = groupKey;
+        break;
+      }
+    }
+    if (group.privateKey == null)
       return false;
+    final collection = await fetchCollection("group/${group.id}/secrets");
+    final secretList = collection.data.unwrap();
+    for (final resource in secretList) {
+      if (resource.attributes["visible"] == true)
+        group.publicKey = EncryptionKey(resource, lib);
+      else {
+        group.parentPrivateKey = EncryptionKey(resource, lib, decryptionAsymmetricKey: group.privateKey.asRSAPrivate());
+      }
     }
     return true;
   }
 
-  Future<bool> createGroupGroup(String name, Identifier groupId) async {
+  Future<bool> createOrganisationGroup(String name, Organization organisation) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups");
     Resource group = new Resource("groups", "",
         attributes: {"name": name},
-        toOne: {"group": groupId});
+        toOne: {"organization": organisation.getIdentifier()});
     final response = await this.jsonApiClient.createResourceAt(uri, group, headers: this._header);
     if (response.isFailed) {
       return false;
     }
+    final resource = response.data.unwrap();
     return true;
   }
-  
 
-  Future<bool> createVault(String name, Identifier owner) async {
+  Future<bool> initGroup(Group group, {EncryptionKey parentKey}) async {
+    final keyPair = new RSAKeyPair(lib, 2048);
+    final public = keyPair.createPublicKey();
+    public.initializePlain();
+    final publicKey = await this.createSecretSymmetric(public, group.getIdentifier(), SymmetricKey(lib));
+    if (public == null)
+      return false;
+    group.publicKey = publicKey;
+    final private = keyPair.createPrivateKey();
+    private.initializeAsymmetric();
+    final privateKey = await this.createSecretASymmetric(public, group.getIdentifier(), user.publicKey.asRSAPublic(), user.privateKey.asRSAPrivate());
+    if (privateKey == null)
+      return false;
+    group.privateKey = privateKey;
+    final privateParentKey = await this.createSecretASymmetric(public, group.getIdentifier(), publicKey.asRSAPublic(), privateKey.asRSAPrivate());
+    if (privateParentKey == null)
+      return false;
+    group.parentPrivateKey = privateParentKey;
+    return true;
+  }
+
+  final _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+  Random _rnd = Random();
+  String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
+      length, (_) => _chars.codeUnitAt(_rnd.nextInt(_chars.length))));
+
+
+  Future<bool> createEncryptionKeyVault(Vault vault, RSAPublicKey encryptionKey, RSAPrivateKey decryptionKey) async {
+    final encryptionKeyVault = SymmetricKey(lib);
+    encryptionKeyVault.key = getRandomString(64);
+    encryptionKeyVault.initializeAsymmetric();
+     final keyVault = await createSecretASymmetric(encryptionKeyVault, vault.getIdentifier(), encryptionKey, decryptionKey);
+    if (keyVault == null)
+      return false;
     this._header["Authorization"] = "bearer ${this.user.jwt}";
-    final uri = Uri.parse("${this._url}:${this._port}/$api_version//vaults");
-    Resource vault = new Resource("vaults", "",
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/vaults/${vault.getIdentifier().id}/relationships/encryption-key");
+
+    final test = await this.jsonApiClient.updateResourceAt(uri, keyVault.serializeAsymetric(encryptionKey), headers: this._header);
+    if (test.isFailed)
+      return false;
+    vault.symmetricKey = keyVault;
+    return test.isSuccessful;
+  }
+
+  Future<bool> createEncryptionKeyUser(Identifier idKey) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/users/${user.id}/relationships/encryption-key");
+
+    final r = Resource(
+      "secrets", idKey.id
+    );
+    final test = await this.jsonApiClient.updateResourceAt(uri, r, headers: this._header);
+    if (test.isFailed)
+      return false;
+    return test.isSuccessful;
+  }
+
+  Future<bool> getEncryptionKeyUser() async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/users/${user.getIdentifier().id}/relationships/encryption-key");
+
+    final test = await this.jsonApiClient.fetchResourceAt(uri, headers: this._header);
+    if (test.isFailed)
+      return false;
+    final resource = test.data.unwrap();
+    if (resource != null)
+      user.encryptionKeyId = resource.id;
+    return test.isSuccessful;
+  }
+
+  Future<bool> getEncryptionKeyVault(Vault vault, RSAPrivateKey decryptionKey) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/vaults/${vault.getIdentifier().id}/relationships/encryption-key");
+
+    final test = await this.jsonApiClient.fetchResourceAt(uri, headers: this._header);
+    if (test.isFailed)
+      return false;
+    if (test.data.resourceObject != null) {
+      vault.encryptionKeyId = test.data.resourceObject.id;
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> createGroupGroup(String name, Group parentGroup, Organization organization) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups");
+    Resource group = new Resource("groups", "",
+        attributes: {"name": name},
+        toOne: {"organization": organization.getIdentifier(), "parent": parentGroup.getIdentifier()});
+    final response = await this.jsonApiClient.createResourceAt(uri, group, headers: this._header);
+    if (response.isFailed)
+      return false;
+    final resource = response.data.unwrap();
+    final newGroup = Group(name, resource.id);
+    final init = await initGroup(newGroup, parentKey: parentGroup.privateKey);
+    if (!init)
+      return false;
+    parentGroup.groups.add(newGroup);
+    return true;
+  }
+
+  Future<Resource> uploadSecretResource(Resource resource) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets");
+    final test = await this.jsonApiClient.createResourceAt(uri, resource, headers: this._header);
+    if (test.isFailed)
+      return null;
+    final r = test.data.unwrap();
+    return r;
+  }
+
+  Future<EncryptionKey> createSecretSymmetric(hclw_secret.ASecret aSecret, Identifier owner, SymmetricKey encryptionKey,
+  {bool visible = false}) async {
+    final blob = aSecret.serialize(encryptionKey.key);
+    final resource = Resource("secrets", "",
+        attributes: {"content": blob, "private": visible}, toOne: {"owner": owner});
+    final r = await uploadSecretResource(resource);
+    if (r == null)
+      return null;
+    return EncryptionKey(r, lib, decryptionSymmetricKey: encryptionKey);
+  }
+
+  Future<EncryptionKey> createSecretASymmetric(hclw_secret.ASecret aSecret, Identifier owner, RSAPublicKey encryptionKey, RSAPrivateKey decryptionKey,
+      {bool visible = false}) async {
+    final blob = aSecret.serializeAsymmetric(encryptionKey);
+    final resource = Resource("secrets", "",
+        attributes: {"content": blob, "private": visible}, toOne: {"owner": owner});
+    final r = await uploadSecretResource(resource);
+    if (r == null)
+      return null;
+    return EncryptionKey(r, lib, decryptionAsymmetricKey: decryptionKey);
+  }
+
+  Future<Vault> createVault(String name, Identifier owner, RSAPublicKey encryptionKey, RSAPrivateKey decryptionKey) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/vaults");
+    Resource vaultResource = new Resource("vaults", "",
         attributes: {"name": name},
         toOne: {"owner": owner});
-    final response = await this.jsonApiClient.createResourceAt(uri, vault, headers: this._header);
-    if (response.isFailed) {
-      return false;
-    }
-    return true;
+    final response = await this.jsonApiClient.createResourceAt(uri, vaultResource, headers: this._header);
+    if (response.isFailed)
+      return null;
+//    final r = response.data.unwrap();
+    Vault vault = Vault(response.data.resourceObject.attributes["name"], response.data.resourceObject.id);
+//    final success = await createEncryptionKeyVault(vault, encryptionKey, decryptionKey);
+//    if (!success)
+//      return null;
+    return vault;
   }
 
   Future<bool> addMemberTo(String email, Uri uri) async {
@@ -235,13 +469,12 @@ class  Session {
 
     var organizations = await getOrganization();
     for (var organization in organizations) {
-      organization.groups = await getUserGroup(organization.getIdentifier());
+      organization.groups = await getGroupGroup(organization.getIdentifier());
       organization.members = await getOrganisationMembers(organization.getIdentifier());
     }
     this.user.organizations = organizations;
     return true;
   }
-
 
   Future<json_api.Response<ResourceCollectionData>> fetchCollection(String route, {String arg, QueryParameters queryParameters}) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
@@ -266,12 +499,16 @@ class  Session {
     return response;
   }
 
+  /**
+   * Here is the section handling passwords
+   */
+
   // Register and encrypt new password on the server
-  Future<bool> createPassword(String url, String email, String password, Identifier owner) async {
+  Future<bool> createPassword(String url, String email, String password, Identifier owner, SymmetricKey encryptionKey) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets");
 
-    final blob = createBlob(url, email, password);
+    final blob = createBlob(url, email, password, encryptionKey);
     final resource = Resource("secrets", "",
       attributes: {"content": blob}, toOne: {"owner": owner});
     final test = await this.jsonApiClient.createResourceAt(uri, resource, headers: this._header);
@@ -279,28 +516,28 @@ class  Session {
   }
 
   // Register and encrypt new password on the server
-  Future<bool> updatePassword(Password password) async {
-    //TODO: Update to the last encryption version
-/*    var sym_key = hclw_sym_key.SymmetricKey(this.lib);
-    sym_key.initializeSymmetric();
-    sym_key.key = user.password;*/
+  Future<bool> updatePassword(Password password, Identifier owner, SymmetricKey encryptionKey) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets/${password.id}");
 
     final resource = Resource("secrets", password.id,
-        attributes: {"content": password.secret.password(user.password)},
-        toOne: {"owner": Identifier("users", user.id)});
+        attributes: {"content": password.serialize(encryptionKey.key)},
+        toOne: {"owner": owner});
     final test = await this.jsonApiClient.updateResourceAt(uri, resource, headers: this._header);
     return test.isSuccessful;
+  }
 
+  // Register and encrypt new password on the server
+  Future<bool> deleteSecret(String id) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets/${id}");
+    final test = await this.jsonApiClient.deleteResourceAt(uri, headers: this._header);
+    return test.isSuccessful;
   }
 
   // Register and encrypt new password on the server
   Future<bool> deletePassword(Password password) async {
-    this._header["Authorization"] = "bearer ${this.user.jwt}";
-    final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets/${password.id}");
-    final test = await this.jsonApiClient.deleteResourceAt(uri, headers: this._header);
-    return test.isSuccessful;
+    return await deleteSecret(password.id);
   }
 
   // Register and encrypt new password on the server
@@ -311,19 +548,60 @@ class  Session {
     return test.isSuccessful;
   }
 
+  Future<bool> deleteVault(Vault vault) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/organizations/${vault.id}/relationship/vaults");
+    final test = await this.jsonApiClient.deleteResourceAt(uri, headers: this._header);
+    return test.isSuccessful;
+  }
 
+  Future<bool> activateMFA(bool activate) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/users/${user.id}");
+    final resource = Resource("users", user.id,
+      attributes: {"mfaActivated": activate}
+    );
+    final test = await jsonApiClient.updateResourceAt(uri, resource);
+    user.mfa = test.isSuccessful ? activate: user.mfa;
+    return test.isSuccessful;
+  }
 
   /*
   * Create user on the server, needs the User object
    */
-  Future<bool> createUser(User user) async {
+  Future<bool> createUser(User newUser, String nounce) async {
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/users");
-    final resource = Resource("users", "",
-        attributes: {"email": user.email, "password": lib.getDerivedKey(user.password),
-          "firstName": user.attributes != null ? user.attributes["firstName"]: "",
-          "lastName": user.attributes != null ? user.attributes["lastName"]: ""});
-    final test = await this.jsonApiClient.createResourceAt(uri, resource /*, meta: {"captcha": captchaToken}*/);
-    return test.isSuccessful;
+    final userResource = Resource("users", "",
+        attributes: {"email": newUser.email, "password": lib.getDerivedKey(newUser.password),
+          "firstName": newUser.attributes != null ? newUser.attributes["firstName"]: "",
+          "lastName": newUser.attributes != null ? newUser.attributes["lastName"]: ""});
+    final test = await this.jsonApiClient.createResourceAt(uri, userResource,
+        meta: {"captcha": {"type": "reCAPTCHA-v2-android", "response": nounce}});
+    if (test.isFailed)
+      return false;
+    newUser.id = test.data.resourceObject.id;
+    bool connected = await connectUser(newUser.email, newUser.password);
+    if (!connected)
+      return false;
+    final v = await createVault("\$master", newUser.getIdentifier(), null, null);
+    return v != null;//await initUser();
+  }
+
+  Future<bool> initUser() async {
+    final keyPair = new RSAKeyPair(lib, 2048);
+    final publicKey = keyPair.createPublicKey();
+    publicKey.initializePlain();
+    final publicEncryptionKey = await this.createSecretSymmetric(publicKey,
+        user.getIdentifier(), SymmetricKey(lib), visible: true);
+    if (publicEncryptionKey == null)
+      return false;
+    user.publicKey = publicEncryptionKey;
+    final privateKey = keyPair.createPrivateKey();
+    privateKey.initializeSymmetric();
+    final privateEncryptionKey = await this.createSecretSymmetric(privateKey, user.getIdentifier(), user.symmetricKey);
+    if (privateEncryptionKey == null)
+      return false;
+    return await createEncryptionKeyUser(privateEncryptionKey.getIdentifier());
   }
 
   Future<bool> updateUser() async {
@@ -340,39 +618,45 @@ class  Session {
   }
 
   /*
-  * Create and encrypt blob from json to hexadecimal format
+   * Create and encrypt blob from json to hexadecimal format
    */
-  String createBlob(String url, String email, String password) {
-    hclw_secret.Secret secret = new hclw_secret.Secret(lib, key: user.password);
+  String createBlob(String url, String email, String password, SymmetricKey encryptionKey) {
+    hclw_password.Password secret = new hclw_password.Password(lib);
     secret.password = password;
     secret.domain = url;
     secret.name = url;
-
     secret.login = email;
-    return secret.content;
-    // TODO: Update encryption library
-    /* var sym_key = hclw_sym_key.SymmetricKey(this.lib);
-    sym_key.initializeSymmetric();
-    sym_key.key = user.password;
-    return password.serialize(sym_key.secret);*/
+
+    /*    secret.initializeSymmetric();
+    return secret.serialize(encryptionKey.key);*/
+
+    secret.initializePlain();
+    return secret.serialize("");
   }
 
-  Future<List<Password>> getPassword() async {
-    //TODO: Update to the latest encryption library
-  /*  var sym_key = hclw_sym_key.SymmetricKey(this.lib);
-    sym_key.initializeSymmetric();
-    sym_key.key = user.password;*/
+  Future<List<EncryptionKey>> getPassword() async {
     // QueryParameters queryParameters = QueryParameters({"filter[owner.id]": this.user.id});
-    final response = await fetchCollection("users/${user.id}/secrets");
+
+  }
+
+  Future<bool> getPasswordVault(Vault vault) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final response = await fetchCollection("vaults/${vault.id}/secrets");
     List<Password> res = [];
+
+    if (response.isFailed)
+      return false;
     for (var secret in response.data.collection) {
-      final String encryptedSecret = secret.attributes["content"];
-      final decryptedSecret = new hclw_secret.Secret(
-          lib, content: encryptedSecret, key: user.password);
-//      Secret decryptedSecret;
-      res.add(Password(decryptedSecret, secret.id));
+      if (secret.id == vault.encryptionKeyId)
+        continue;
+      final encryptedSecret = secret.attributes["content"];
+//      final decryptedSecret = lib.deserializeSecret(vault.symmetricKey.asSymmetric().key, encryptedSecret);
+      final decryptedSecret = lib.deserializeSecret("", encryptedSecret);
+      if (decryptedSecret is hclw_password.Password)
+        res.add(Password(decryptedSecret, secret.id));
     }
-    return res;
+    vault.passwords = res;
+    return true;
   }
 
   Future<List<User>> getMembersFrom(Uri uri) async {
@@ -383,7 +667,7 @@ class  Session {
     }
     List<User> res = [];
     for (var element in response.data.collection) {
-      var u = User(element.attributes["email"], "");
+      var u = User(element.attributes["email"], "", null);
       u.id = element.id;
       res.add(u);
     }
@@ -399,5 +683,4 @@ class  Session {
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups/${identifier.id}/members");
     return getMembersFrom(uri);
   }
-
 }

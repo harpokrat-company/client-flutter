@@ -1,14 +1,17 @@
 
+import 'package:harpokrat/model/EcryptionKey.dart';
+import 'package:harpokrat/model/Password.dart';
 import 'package:json_api/document.dart';
-//import 'package:hclw_flutter/asecret.dart' as hclw_asecret;
 
 
 class Vault {
   String name;
   String id;
-//  List<hclw_secret> secrets;
+  String encryptionKeyId;
+  EncryptionKey symmetricKey;
+  List<Password> passwords;
 
   Vault(this.name, this.id);
 
-  Identifier getIdentifier() => Identifier("groups", id);
+  Identifier getIdentifier() => Identifier("vaults", id);
 }

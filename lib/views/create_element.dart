@@ -59,7 +59,7 @@ class CreateElementPage extends State<CreateElementState> {
                   var o = widget.session.user.getOrganization(orgaController.text);
                   if (o != null)
                   widget.session.createOrganisationGroup(nameController.text,
-                      o.getIdentifier());
+                      o);
                   Navigator.of(context).pop();
                 },
               )
@@ -135,7 +135,9 @@ class CreateElementPage extends State<CreateElementState> {
                 child: Text("Save"),
                 onPressed: () {
                   widget.session.createVault(nameController.text,
-                      widget.session.user.getIdentifier());
+                      widget.session.user.getIdentifier(),
+                      widget.session.user.publicKey.asRSAPublic(),
+                      widget.session.user.privateKey.asRSAPrivate());
                   Navigator.of(context).pop();
                 },
               )
@@ -191,7 +193,9 @@ class CreateElementPage extends State<CreateElementState> {
                 onPressed: () {
                   widget.session.createPassword(nameController.text,
                       loginController.text,
-                      passwordController.text, widget.session.user.getIdentifier());
+                      passwordController.text,
+                      widget.session.user.getIdentifier(),
+                      widget.session.user.symmetricKey);
                   Navigator.of(context).pop();
                 },
               )

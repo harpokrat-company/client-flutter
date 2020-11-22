@@ -16,9 +16,9 @@ class PasswordSearchDelegate extends SearchDelegate {
   Widget buildSuggestions(BuildContext context) {
     var filteredList = passwordList.where(
             (element) =>
-                element.secret.name.contains(this.query)
-                    || element.secret.login.contains(this.query)
-                    || element.secret.domain.contains(this.query))
+                element.name.contains(this.query)
+                    || element.login.contains(this.query)
+                    || element.domain.contains(this.query))
         .toList();
     return ListView.builder(
         padding: const EdgeInsets.all(8.0),
@@ -31,8 +31,8 @@ class PasswordSearchDelegate extends SearchDelegate {
                       builder: (ctxt) => new PasswordView(
                           session: this.session, password: filteredList[index]))),
               leading: Icon(Icons.security),
-              title: Text('${filteredList[index].secret.name}'),
-              subtitle: Text('${filteredList[index].secret.login}'),
+              title: Text('${filteredList[index].name}'),
+              subtitle: Text('${filteredList[index].login}'),
             ),
           );
         });
@@ -65,9 +65,9 @@ class PasswordSearchDelegate extends SearchDelegate {
   Widget buildResults(BuildContext context) {
     var filteredList = passwordList.where(
             (element) =>
-        element.secret.name.contains(this.query)
-            || element.secret.login.contains(this.query)
-            || element.secret.domain.contains(this.query))
+        element.name.contains(this.query)
+            || element.login.contains(this.query)
+            || element.domain.contains(this.query))
         .toList();
     if (filteredList.length == 0) {
       return Column(
@@ -92,8 +92,8 @@ class PasswordSearchDelegate extends SearchDelegate {
                       builder: (ctxt) => new PasswordView(
                           session: this.session, password: filteredList[index]))),
               leading: Icon(Icons.security),
-              title: Text('${filteredList[index].secret.name}'),
-              subtitle: Text('${filteredList[index].secret.login}'),
+              title: Text('${filteredList[index].name}'),
+              subtitle: Text('${filteredList[index].login}'),
             ),
           );
         });
