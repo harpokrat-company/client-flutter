@@ -9,7 +9,7 @@ class Vault {
   String id;
   String encryptionKeyId;
   EncryptionKey symmetricKey;
-  List<Password> passwords;
+  List<Password> passwords = [];
 
   Vault(this.name, this.id);
 

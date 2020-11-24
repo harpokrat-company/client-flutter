@@ -25,7 +25,12 @@ class PasswordListState extends StatefulWidget {
 
   Future<List<Password>> loadPassword() async {
     await session.getPersonalInfo();
-    return [];//this.session.getPassword();
+    var vaults = await this.session.getOwnerVaults(session.user.asOwner());
+    if (vaults.isNotEmpty) {
+      await session.getPasswordVault(vaults[0]);
+      return vaults[0].passwords;
+    }
+    return [];
   }
 
 }

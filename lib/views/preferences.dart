@@ -62,7 +62,7 @@ class PreferencePage extends State<PreferenceState> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         onTap: _onItemTapped,
-          currentIndex: 2,
+          currentIndex: 1,
           items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
               icon: Icon(Icons.home),

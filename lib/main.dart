@@ -241,7 +241,7 @@ class _MyHomePageState extends State<MyHomePage> {
       messages: LoginMessages(
           recoverPasswordDescription: "We will send you a link to reset your password"
       ),
-      onRecoverPassword: null,
+      onRecoverPassword: (okio) async => okio,
       theme: LoginTheme(
         primaryColor: hpkBlue,
         accentColor: hpkBlue.withOpacity(0),

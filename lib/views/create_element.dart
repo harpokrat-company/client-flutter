@@ -6,7 +6,7 @@ class CreateElementState extends StatefulWidget {
   final String title;
   Session session;
 
-  CreateElementState({Key key, @required this.session, this.title}) : super(key: key);
+  CreateElementState({Key key, @required this.session, @required this.title}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {

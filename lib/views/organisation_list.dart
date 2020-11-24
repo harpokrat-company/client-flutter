@@ -21,7 +21,8 @@ class OrganisationList extends StatefulWidget {
 class OrganisationListPage extends State<OrganisationList> {
 
   void _showSnackBar(BuildContext context, String text) {
-    Scaffold.of(context).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    setState(() {});
   }
 
   ListView buildOrganisationList(BuildContext context) {
@@ -45,13 +46,8 @@ class OrganisationListPage extends State<OrganisationList> {
                   caption: 'Leave',
                   color: Colors.red,
                   icon: Icons.delete,
-                  onTap: () => _showSnackBar(context, 'Delete'),
-                ),
-                IconSlideAction(
-                  caption: 'Share',
-                  color: Colors.indigo,
-                  icon: Icons.share,
-                  onTap: () => _showSnackBar(context, 'Share'),
+                  onTap: () => widget.session.banOrganizationMember(widget.session.user.email, organizations[idx].getIdentifier())
+                      .then((value) => _showSnackBar(context, value ? 'Organization left': 'Network error')),
                 ),
               ],
             )
@@ -59,13 +55,47 @@ class OrganisationListPage extends State<OrganisationList> {
         });
   }
 
+  void _showCreateOrganizationDialog() {
+    final nameController = TextEditingController();
+    showDialog(context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("Create new organization"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextField(
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                    hintText: 'Enter name',
+                  ),
+                  controller: nameController,
+                ),
+              ],
+            ),
+            actions: <Widget>[
+              FlatButton(
+                child: Text("Cancel"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              FlatButton(
+                child: Text("Save"),
+                onPressed: () {
+                  widget.session.createOrganization(nameController.text,
+                      widget.session.user.getIdentifier())
+                      .then((value) => _showSnackBar(this.context, value ? "Organization ${nameController.text} created" : "Unbale to create organization"));
+                  Navigator.of(context).pop();
+                },
+              )
+            ],
+          );
+        });
+  }
+
   Widget buildFrame(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("My organisations"),
-      ),
-      body: buildOrganisationList(context),
-    );
+    return buildOrganisationList(context);
   }
 
   @override
@@ -88,6 +118,13 @@ class OrganisationListPage extends State<OrganisationList> {
             return buildFrame(context);
         }
       }
-    ));
+    ),
+      floatingActionButton: Builder(builder: (context) => FloatingActionButton.extended(
+        onPressed: _showCreateOrganizationDialog,
+        icon: Icon(Icons.add),
+        label: Text("Create new organization"),
+        backgroundColor: Theme.of(context).accentColor,
+      )),
+    );
   }
 }

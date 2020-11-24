@@ -21,10 +21,7 @@ class UserViewPage extends State<UserView> {
   void _onItemTapped(int index) {
     var page;
     switch (index) {
-      case 0:
-        page = "password_list";
-        break;
-      case 2:
+      case 1:
         page = "preferences";
         break;
       default:
@@ -72,10 +69,6 @@ class UserViewPage extends State<UserView> {
             BottomNavigationBarItem(
               icon: Icon(Icons.home),
               title: Text('Home'),
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.account_box),
-              title: Text('Personal info'),
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),

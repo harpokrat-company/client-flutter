@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:harpokrat/model/Group.dart';
 import 'package:harpokrat/model/Organization.dart';
 import 'package:harpokrat/views/vault_view.dart';
@@ -68,19 +69,25 @@ class GroupeViewPage extends State<GroupView> {
   }
 
   ListView buildGroupList() {
+    final groups = widget.group.groups;
     return ListView.builder(
-      itemCount: widget.group.groups.length,
+      itemCount: groups.length,
       itemBuilder: (context, index) {
-        return ListTile(
-          title: Text(widget.group.groups[index].name),
-          trailing: IconButton(
-            icon: Icon(Icons.delete),
-            onPressed: () => null,
+        return Slidable(
+          actionPane: SlidableDrawerActionPane(),
+          child: ListTile(
+            leading: Icon(Icons.account_circle),
+            title: Text(groups[index].name),
           ),
-          onTap: () => Navigator.push(context,
-              new MaterialPageRoute(
-                  builder: (ctxt) => new GroupView(
-                      session: widget.session, group: widget.group.groups[index], organization: widget.organization,))),
+          actions: <Widget>[
+            IconSlideAction(
+              caption: 'Ban',
+              color: Colors.red,
+              icon: Icons.delete,
+              onTap: () => widget.session.deleteGroup(groups[index])
+                  .then((value) => _showSnackBar(context, value ? 'Group ${groups[index].name} banned': 'Network error')),
+            ),
+          ],
         );
       },
     );
@@ -109,13 +116,31 @@ class GroupeViewPage extends State<GroupView> {
     );
   }
 
+  void _showSnackBar(BuildContext context, String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    setState(() {});
+  }
+
   ListView buildMemberList() {
+    final members = widget.group.members;
     return ListView.builder(
       itemCount: widget.group.members.length,
       itemBuilder: (context, index) {
-        return ListTile(
-          leading: Icon(Icons.account_circle),
-          title: Text(widget.group.members[index].email),
+        return Slidable(
+          actionPane: SlidableDrawerActionPane(),
+          child: ListTile(
+            leading: Icon(Icons.account_circle),
+            title: Text(members[index].email),
+          ),
+          actions: <Widget>[
+            IconSlideAction(
+              caption: 'Ban',
+              color: Colors.red,
+              icon: Icons.delete,
+              onTap: () => widget.session.banGroupMember(members[index].email,  members[index].getIdentifier())
+                  .then((value) => _showSnackBar(context, value ? 'User ${members[index].email} banned': 'Network error')),
+            ),
+          ],
         );
       },
     );

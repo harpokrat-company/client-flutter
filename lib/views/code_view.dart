@@ -1,7 +1,7 @@
 
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:harpokrat/controller/session.dart';
 
 class CodeView extends StatefulWidget {
@@ -11,31 +11,41 @@ class CodeView extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() {
-    // TODO: implement createState
-    throw UnimplementedError();
+    return CodeViewPage();
   }
 }
 
 class CodeViewPage extends State<CodeView> {
   @override
   Widget build(BuildContext context) {
-    TextEditingController formController;
-    return Center(child: Column(
-      children: [
-        Text("Please enter the code you received below"),
-        TextFormField(
+    TextEditingController formController = TextEditingController();
+    return Scaffold(
+        body: Center(child: Card(
+      child: Column(children: [
+        ListTile(
+        title: Text("Please enter the code you received below", style: TextStyle(
+          fontSize: 20,
+        ),),
+        subtitle: TextFormField(
           controller: formController,
         ),
+      ),
         Builder(builder: (context) =>
-        MaterialButton(
-          onPressed: () => widget.session.verifyToken(formController.text)
-              .then((value) => value ?
-              Navigator.pushNamed(context, "detail_menu")
-          : Scaffold.of(context).showSnackBar(SnackBar(content: Text("Code incorrect, try again")))),
-          child: Text("Send code"),
-        ))
-      ],
-    ),);
+            MaterialButton(
+              onPressed: () => widget.session.verifyToken(formController.text)
+                  .then((value) => value ?
+              Navigator.pushNamed(context, "detail_menu", arguments: widget.session)
+                  : Scaffold.of(context).showSnackBar(SnackBar(content: Text("Code incorrect, try again")))),
+              child: Text("Verify code"),
+              textColor: Colors.white,
+              color: Theme.of(context).accentColor,
+            )),
+
+      ]
+      )
+        )
+        )
+    );
   }
 
 }

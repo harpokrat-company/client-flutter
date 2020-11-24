@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:harpokrat/model/Organization.dart';
 import 'package:harpokrat/model/Password.dart';
 import 'package:harpokrat/widget/buttons.dart';
@@ -55,7 +56,7 @@ class OrganizationViewPage extends State<OrganizationView> {
                 child: Text("Save"),
                 onPressed: () {
                     widget.session.addOrganizationMember(nameController.text,
-                        widget.organization.getIdentifier());
+                        widget.organization.getIdentifier()).then((value) => _showSnackBar(context, value ? "User ${nameController.text} added": "Unable to add User"));
                   Navigator.of(context).pop();
                 },
               )
@@ -93,7 +94,8 @@ class OrganizationViewPage extends State<OrganizationView> {
                 child: Text("Save"),
                 onPressed: () {
                   widget.session.createOrganisationGroup(nameController.text,
-                      widget.organization);
+                      widget.organization)
+                      .then((value) => _showSnackBar(context, value ? "Group ${nameController.text} created": "Unable to create Group"));
                   Navigator.of(context).pop();
                 },
               )
@@ -122,13 +124,32 @@ class OrganizationViewPage extends State<OrganizationView> {
       },);
   }
 
+  void _showSnackBar(BuildContext context, String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    setState(() {});
+  }
+
+
   ListView buildMemberList() {
+    final members = widget.organization.members;
     return ListView.builder(
-      itemCount: widget.organization.members.length,
+      itemCount:members.length,
       itemBuilder: (context, index) {
-        return ListTile(
-          leading: Icon(Icons.account_circle),
-          title: Text(widget.organization.members[index].email),
+        return Slidable(
+            actionPane: SlidableDrawerActionPane(),
+            child: ListTile(
+              leading: Icon(Icons.account_circle),
+              title: Text(members[index].email),
+            ),
+          actions: <Widget>[
+            IconSlideAction(
+              caption: 'Ban',
+              color: Colors.red,
+              icon: Icons.delete,
+              onTap: () => widget.session.banOrganizationMember(members[index].email,  members[index].getIdentifier())
+                  .then((value) => _showSnackBar(context, value ? 'User ${members[index].email} banned': 'Network error')),
+            ),
+          ],
         );
       },);
   }
@@ -167,7 +188,7 @@ class OrganizationViewPage extends State<OrganizationView> {
               floatingActionButton: Builder(builder: (context) => FloatingActionButton.extended(
                 icon: Icon(Icons.add),
                 label: Text(tabName),
-                onPressed: () => (tabName == "group" ? _showAddUserDialog() : _showAddUserDialog()),
+                onPressed: () => (tabName == "group" ? _showAddGroupDialog() : _showAddUserDialog()),
               ),
               ),
             )

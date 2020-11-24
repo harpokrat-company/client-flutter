@@ -107,9 +107,9 @@ class  Session {
   Future<bool> verifyToken(String token) async {
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/secure-actions/${user.mfaId}");
     final r = Resource(
-      "secure-actions", "", attributes: {"validated": true}
+      "secure-actions", user.mfaId, attributes: {"validated": true}
     );
-    final response = await this.jsonApiClient.createResourceAt(uri, r, headers: this._header, meta: {"token": token});
+    final response = await this.jsonApiClient.updateResourceAt(uri, r, headers: this._header, meta: {"token": token});
     return response.isSuccessful;
   }
 
@@ -135,10 +135,11 @@ class  Session {
       user.jwt = resource.attributes["token"];
       user.id = resource.relationships["user"].linkage.id;
     }
-    final mfa = response.data.resourceObject.relationships["mfa"];
+    QueryParameters queryParameters = QueryParameters({"Filter[user.email]": email});
+    ToOne mfa = response.data.resourceObject.relationships["mfa"];
     if (mfa != null) {
       user.mfa = true;
-      user.mfaId = mfa.toString();//["data"]["id"];
+      user.mfaId = mfa.identifier.id;
     }
     return true;
   }
@@ -414,11 +415,27 @@ class  Session {
     return vault;
   }
 
+  Future<bool> banMemberFrom(String email, Uri uri) async {
+    QueryParameters queryParameters = QueryParameters({"Filter[user.email]": email});
+    final collection = await fetchCollection("users", queryParameters: queryParameters);
+    final l = collection.data.collection.where((element) => element.attributes["email"] == email).toList();
+    if (l.length < 1)
+      return false;
+    final id = l[0].id;
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    Identifier member = Identifier("users", id);
+    final response = await this.jsonApiClient.deleteFromToManyAt(uri,
+        [member], headers: this._header);
+    if (response.isFailed) {
+      return false;
+    }
+    return true;
+  }
+
   Future<bool> addMemberTo(String email, Uri uri) async {
     QueryParameters queryParameters = QueryParameters({"Filter[user.email]": email});
-    var uri = Uri.parse("${this._url}:${this._port}/$api_version/users/");
     final collection = await fetchCollection("users", queryParameters: queryParameters);
-    final l = collection.data.unwrap().where((element) => element.attributes["email"] == email).toList();
+    final l = collection.data.collection.where((element) => element.attributes["email"] == email).toList();
     if (l.length < 1)
       return false;
     final id = l[0].id;
@@ -442,6 +459,17 @@ class  Session {
     return addMemberTo(email, uri);
   }
 
+  Future<bool> banGroupMember(String email, Identifier owner) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/groups/${owner.id}/relationships/members");
+    return banMemberFrom(email, uri);
+  }
+
+  Future<bool> banOrganizationMember(String email, Identifier owner) async {
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/organizations/${owner.id}/relationships/members");
+    return banMemberFrom(email, uri);
+  }
+
+
   Future<bool> createOrganization(String name, Identifier owner) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/organizations");
@@ -463,7 +491,12 @@ class  Session {
     final response = await fetchResource("users", arg: user.id);
     if (response.isFailed)
       return false;
-    final resource = response.data.unwrap();
+    var resource;
+    try {
+       resource = response.data.unwrap();
+    } catch (e) {
+      resource = response.data.resourceObject;
+    }
     this.user.attributes["firstName"] = resource.attributes["firstName"] as String;
     this.user.attributes["lastName"] = resource.attributes["lastName"] as String;
 
@@ -556,12 +589,12 @@ class  Session {
   }
 
   Future<bool> activateMFA(bool activate) async {
-    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    this._header["Authorization"] = "Bearer ${this.user.jwt}";
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/users/${user.id}");
     final resource = Resource("users", user.id,
       attributes: {"mfaActivated": activate}
     );
-    final test = await jsonApiClient.updateResourceAt(uri, resource);
+    final test = await jsonApiClient.updateResourceAt(uri, resource, headers: this._header);
     user.mfa = test.isSuccessful ? activate: user.mfa;
     return test.isSuccessful;
   }
@@ -635,8 +668,6 @@ class  Session {
   }
 
   Future<List<EncryptionKey>> getPassword() async {
-    // QueryParameters queryParameters = QueryParameters({"filter[owner.id]": this.user.id});
-
   }
 
   Future<bool> getPasswordVault(Vault vault) async {

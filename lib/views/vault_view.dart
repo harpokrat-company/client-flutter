@@ -217,7 +217,7 @@ class VaultViewPage extends State<VaultView> {
           onPressed: _showCreatePasswordDialog,
           icon: Icon(Icons.add),
           label: Text("Create new passwords"),
-          backgroundColor: Colors.blueAccent,
+          backgroundColor: Theme.of(context).accentColor,
         )),
     );
   }
