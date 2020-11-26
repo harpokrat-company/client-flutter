@@ -111,10 +111,8 @@ public final class HpkAutofillService extends AutofillService {
                 String value = "";
                 if (field.name.equals("password"))
                     value = candidates.get(i).password;
-                else if (field.name.equals("email"))
-                    value = candidates.get(i).password;
                 else
-                    continue;
+                    value = candidates.get(i).login;
                 String displayValue = candidates.get(i).login;
                 RemoteViews presentation = newDatasetPresentation(packageName, displayValue);
                 dataset.setValue(field.id, AutofillValue.forText(value), presentation);
@@ -215,7 +213,7 @@ public final class HpkAutofillService extends AutofillService {
         String hint = node.getHint();
         if (hint != null) {
             hint = hint.toLowerCase();
-            if (hint.equals("email") || hint.equals("password")) {
+            if (hint.equals("email") || hint.equals("password") || hint.equals("username")) {
                 Log.v(TAG, node.getIdPackage());
                 Log.v(TAG, "visibility False detected");
                 AutofillId id = node.getAutofillId();

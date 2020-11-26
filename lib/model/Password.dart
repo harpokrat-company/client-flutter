@@ -15,7 +15,6 @@ import 'package:hclw_flutter/password.dart' as hclw_secret;
 Future<List<Password>> getPasswordsFromAutofill(HclwFlutter lib) async {
   var passwordList = List<Password>();
   String canRetrieve = await FGrecaptcha.channel.invokeMethod("canRetrievePassword");
-  print("AAAAAAAAAAAAAAAAAAA");
   while (canRetrieve == "true") {
     Map<String, String> response = await FGrecaptcha.channel.invokeMapMethod("retrievePassword");
     var secret = hclw_secret.Password(lib);
@@ -25,7 +24,6 @@ Future<List<Password>> getPasswordsFromAutofill(HclwFlutter lib) async {
     passwordList.add(Password(secret, ""));
     canRetrieve = await FGrecaptcha.channel.invokeMethod("canRetrievePassword");
   }
-  print("BBBBBBBBBBBBB");
   return passwordList;
 }
 

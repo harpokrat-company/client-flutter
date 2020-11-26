@@ -54,6 +54,7 @@ class UserInformationPage extends State<UserInformationState> {
     fetchUserInfo();
 
     var firstNameController = new TextEditingController();
+    var passwordController = new TextEditingController();
     var lastNameController = new TextEditingController();
     if (widget.infoFetched) {
       firstNameController.text = widget.session.user.attributes["firstName"];
@@ -88,11 +89,12 @@ class UserInformationPage extends State<UserInformationState> {
                 subtitle: Text(widget.session.user.email),
                 trailing: Icon(Icons.more_vert)
             ),
-            Text("My Organizations"),
-            Expanded(
-              child: getOrganizations(),
-            )
-
+            ListTile(
+                leading: Icon(Icons.security),
+                title: Text("Password"),
+                subtitle: Text(widget.session.user.password),
+                trailing: Icon(Icons.more_vert)
+            ),
           ],
         )
       ),
@@ -100,8 +102,9 @@ class UserInformationPage extends State<UserInformationState> {
         onPressed: () {
       widget.session.user.attributes["firstName"] = firstNameController.text;
       widget.session.user.attributes["lastName"] = lastNameController.text;
+          widget.session.user.password = passwordController.text;
       widget.session.updateUser().then((value) =>
-      Scaffold.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(value ? "Information updated" : "Error updating information"),))
       );},
         label: Text("Save"),

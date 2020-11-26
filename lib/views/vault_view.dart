@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:harpokrat/controller/session.dart';
 import 'package:harpokrat/model/Password.dart';
 import 'package:harpokrat/model/Vault.dart';
+import 'package:harpokrat/views/password_search.dart';
 
 class VaultView extends StatefulWidget {
   VaultView({Key key, @required this.session, @required this.vault})
@@ -197,6 +198,11 @@ class VaultViewPage extends State<VaultView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.vault.name),
+          actions:[
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () => showSearch(context: context, delegate: PasswordSearchDelegate(widget.vault.passwords, widget.session)),
+          )]
       ),
       body: FutureBuilder<bool>(
           future: widget.session.getPasswordVault(widget.vault),

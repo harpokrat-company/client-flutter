@@ -228,7 +228,6 @@ class  Session {
     }
     return res;
   }
-
   Future<bool> getGroupSecrets(Group group) async {
     for (final groupKey in user.groupKeys) {
       if (groupKey.asRSAPrivate().owner == group.id) {
