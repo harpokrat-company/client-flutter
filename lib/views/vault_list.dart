@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:harpokrat/controller/session.dart';
 import 'package:harpokrat/model/Owner.dart';
+import 'package:harpokrat/model/Password.dart';
 import 'package:harpokrat/model/Vault.dart';
 import 'package:harpokrat/views/vault_view.dart';
 
@@ -44,10 +45,13 @@ class VaultListPage extends State<VaultList> {
       ),
       body: FutureBuilder(
         future: () async {
-          var vl = await widget.session.getOwnerVaults(widget.owner);
+          List<Vault> vl = await widget.session.getOwnerVaults(widget.owner);
           for (var v in vl)
 //            await widget.session.getVaultData(v, widget.owner.publicKey.asRSAPublic(), widget.owner.privateKey.asRSAPrivate());
             await widget.session.getVaultData(v, null, null);
+          //var vault = Vault("plop", "zzzz");
+          //vault.passwords = await getPasswordsFromAutofill(widget.session.lib);
+//          vl.add(vault);
           return vl;}(),
           builder: (BuildContext context, AsyncSnapshot<List<Vault>> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -67,7 +71,7 @@ class VaultListPage extends State<VaultList> {
 //          widget.session.createVault("plop", widget.owner.identifier, widget.owner.publicKey.asRSAPublic(), widget.owner.privateKey.asRSAPrivate())
           widget.session.createVault("\$master", widget.owner.identifier, null, null)
                 .then((value) {
-                  Scaffold.of(context).showSnackBar(SnackBar(content: Text(value != null ? "Vault created": "Error when creationg vault"),));});
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value != null ? "Vault created": "Error when creationg vault"),));});
       },
         icon: Icon(Icons.add),
         label: Text("Create new Vault"),

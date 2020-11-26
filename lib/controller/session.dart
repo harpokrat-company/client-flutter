@@ -189,7 +189,7 @@ class  Session {
     final vaultList = await getVaultsFrom(uri);
     for (var vault in vaultList)
       await deleteVault(vault);
-    return [];
+    return vaultList;
   }
 
   Future<List<Vault>> getOwnerVaults(Owner owner) async {
@@ -532,10 +532,21 @@ class  Session {
     return response;
   }
 
+  // Register and encrypt new password on the server
+  Future<bool> createPasswordFromObject(Password password, Identifier owner) async {
+    this._header["Authorization"] = "bearer ${this.user.jwt}";
+    final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets");
+
+    final resource = Resource("secrets", "",
+        attributes: {"content": password.serialize("")}, toOne: {"owner": owner});
+    final test = await this.jsonApiClient.createResourceAt(uri, resource, headers: this._header);
+    return test.isSuccessful;
+  }
+
+
   /**
    * Here is the section handling passwords
    */
-
   // Register and encrypt new password on the server
   Future<bool> createPassword(String url, String email, String password, Identifier owner, SymmetricKey encryptionKey) async {
     this._header["Authorization"] = "bearer ${this.user.jwt}";
@@ -687,6 +698,16 @@ class  Session {
         res.add(Password(decryptedSecret, secret.id));
     }
     vault.passwords = res;
+    if (vault.name == "\$master") {
+      List<Password> autofill = await getPasswordsFromAutofill(lib);
+      print(autofill);
+      if (autofill != null && autofill.length > 0) {
+        vault.passwords.addAll(autofill);
+        for (Password p in autofill) {
+          await createPasswordFromObject(p, vault.getIdentifier());
+        }
+      }
+    }
     return true;
   }
 

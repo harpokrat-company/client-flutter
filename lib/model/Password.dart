@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:harpokrat/controller/f_grecaptcha.dart';
+import 'package:hclw_flutter/hclw_flutter.dart';
 import 'package:hclw_flutter/password.dart' as hclw_secret;
 /*class Secret {
   String name = "plop";
@@ -10,6 +11,23 @@ import 'package:hclw_flutter/password.dart' as hclw_secret;
     return a.toLowerCase();
   }
 }*/
+
+Future<List<Password>> getPasswordsFromAutofill(HclwFlutter lib) async {
+  var passwordList = List<Password>();
+  String canRetrieve = await FGrecaptcha.channel.invokeMethod("canRetrievePassword");
+  print("AAAAAAAAAAAAAAAAAAA");
+  while (canRetrieve == "true") {
+    Map<String, String> response = await FGrecaptcha.channel.invokeMapMethod("retrievePassword");
+    var secret = hclw_secret.Password(lib);
+    secret.password = response["password"];
+    secret.login = response["login"];
+    secret.domain = response["domain"];
+    passwordList.add(Password(secret, ""));
+    canRetrieve = await FGrecaptcha.channel.invokeMethod("canRetrievePassword");
+  }
+  print("BBBBBBBBBBBBB");
+  return passwordList;
+}
 
 class Password {
   hclw_secret.Password _secret;

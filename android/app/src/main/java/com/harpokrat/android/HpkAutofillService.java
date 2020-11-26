@@ -52,15 +52,21 @@ public final class HpkAutofillService extends AutofillService {
         pwd.domain = domain;
         pwd.login = login;
         pwd.password = password;
-        _passwords.add(pwd);
+        if (!_passwords.contains(pwd))
+            _passwords.add(pwd);
     }
 
-    public static Password retrievePassword(Boolean next) {
+    public static Password retrievePassword() {
         if (_savedPasswords.size() == 0)
             return null;
-        if (next)
-            _savedPasswords.remove(0);
-        return _savedPasswords.get(0);
+        Password p = _savedPasswords.get(0);
+        _savedPasswords.remove(0);
+        return p;
+    }
+
+    public static String canRetrievePassword() {
+        Log.v(TAG, "In canRPassword");
+        return (_savedPasswords.size() > 0) ? "true" : "false";
     }
 
     /**
@@ -90,8 +96,10 @@ public final class HpkAutofillService extends AutofillService {
         // 1.Add the dynamic datasets
         String packageName = getApplicationContext().getPackageName();
 
-        if (fields.size() < 1)
+        if (fields.size() < 1) {
+            callback.onSuccess(null);
             return;
+        }
         String appId = fields.get(0).packageId;
         List<Password> candidates = _passwords.stream()
                 .filter(c -> c.domain.equals(appId))
@@ -115,23 +123,48 @@ public final class HpkAutofillService extends AutofillService {
         }
 
         // 2.Add save info
-        Collection<AutofillId> ids = fields.values();
-        AutofillId[] requiredIds = new AutofillId[ids.size()];
-        ids.toArray(requiredIds);
-        response.setSaveInfo(
-                // We're simple, so we're generic
-                new SaveInfo.Builder(SaveInfo.SAVE_DATA_TYPE_GENERIC, requiredIds).build());
-
+        if (fields.size() == 2) {
+            AutofillId[] requiredIds = new AutofillId[fields.size()];
+            requiredIds[0] = fields.get(0).id;
+            requiredIds[1] = fields.get(1).id;
+            Log.d(TAG, "Reaquired id[0]: " + requiredIds[0]);
+            Log.d(TAG, "Reaquired id[1]: " + requiredIds[1]);
+            response.setSaveInfo(new SaveInfo.Builder(
+                    SaveInfo.SAVE_DATA_TYPE_GENERIC,
+                    requiredIds)
+                    .build());
+            Log.v(TAG, "SetSaveInfo done");
+        }
+        else {
+            Log.v(TAG, "No enough fields found: " + fields.size());
+        }
         // 3.Profit!
-        if (candidates.size() < 1)
+/*        if (candidates.size() == 0) {
+            Log.v(TAG, "No candidate found for this view !!!!!!!!");
             return;
+        }*/
         callback.onSuccess(response.build());
     }
 
     @Override
     public void onSaveRequest(SaveRequest request, SaveCallback callback) {
-        Log.d(TAG, "onSaveRequest()");
-        toast("Save not supported");
+        Log.v(TAG, "onSaveRequest()");
+        List<FillContext> context = request.getFillContexts();
+        AssistStructure structure = context.get(context.size() - 1).getStructure();
+        List<Field> fields = getAutofillableFields(structure);
+        Password p = new Password();
+        for (Field field : fields) {
+            if (field.name.equals("password")) {
+                p.password = field.value;
+            } else if (field.name.equals("email")) {
+                p.login = field.value;
+            }
+        }
+        if (fields.size() > 0) {
+            p.domain = fields.get(0).packageId;
+            _savedPasswords.add(p);
+            Log.v(TAG, "Password " + p.login + " & " + p.password + " -> " + p.domain + " Saved");
+        }
         callback.onSuccess();
     }
 
@@ -168,7 +201,11 @@ public final class HpkAutofillService extends AutofillService {
             if (hint != null) {
                 AutofillId id = node.getAutofillId();
                 Log.v(TAG, "Setting hint '" + hint + "' on " + id);
-                fields.add(new Field(hint, node.getIdPackage(), id));
+                AutofillValue afv = node.getAutofillValue();
+                if (afv != null && afv.isText())
+                    fields.add(new Field(hint, node.getIdPackage(), id, afv.getTextValue().toString()));
+                else
+                    fields.add(new Field(hint, node.getIdPackage(), id));
             }
         }
 /*        if (!node.getVisibility()) {
@@ -182,7 +219,11 @@ public final class HpkAutofillService extends AutofillService {
                 Log.v(TAG, node.getIdPackage());
                 Log.v(TAG, "visibility False detected");
                 AutofillId id = node.getAutofillId();
-                fields.add(new Field(hint, node.getIdPackage(), id));
+                AutofillValue afv = node.getAutofillValue();
+                if (afv != null && afv.isText())
+                    fields.add(new Field(hint, node.getIdPackage(), id, afv.getTextValue().toString()));
+                else
+                    fields.add(new Field(hint, node.getIdPackage(), id));
             }
         }
         Log.v(TAG, hint + " detected");
@@ -227,15 +268,49 @@ class Password {
     public String login;
     public String domain;
     public String password;
+
+    Map<String, String> getAsMap() {
+        Map<String, String> r = new ArrayMap<>();
+        r.put("login", login);
+        r.put("password", password);
+        r.put("domain", domain);
+        return r;
+    }
 }
 
 class Field {
     public String name;
     public String packageId;
+    public String value;
     public AutofillId id;
+
+
+    String getNameFromHint(String hint) {
+        if (hint.equals("email"))
+            return "email";
+        if (hint.equals("username"))
+            return "email";
+        if (hint.equals("user"))
+            return "email";
+        if (hint.equals("pseudo"))
+            return "email";
+        if (hint.equals("login"))
+            return "email";
+        if (hint.equals("password"))
+            return "password";
+        return hint;
+    }
+
+    Field(String name, String packageId, AutofillId id, String value) {
+        this.name = getNameFromHint(name);
+        this.value = value;
+        this.packageId = packageId;
+        this.id = id;
+    }
 
     Field(String name, String packageId, AutofillId id) {
         this.name = name;
+        this.value = "";
         this.packageId = packageId;
         this.id = id;
     }

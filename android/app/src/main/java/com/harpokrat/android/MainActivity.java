@@ -12,7 +12,7 @@ import com.google.android.gms.tasks.*;
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
 
-import io.flutter.plugins.GeneratedPluginRegistrant;
+//import io.flutter.plugins.GeneratedPluginRegistrant;
 import io.flutter.plugin.common.MethodChannel;
 
 import com.harpokrat.android.HpkAutofillService;
@@ -27,7 +27,6 @@ public class MainActivity extends FlutterActivity {
         new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL)
                 .setMethodCallHandler(
                         (call, result) -> {
-                            Log.v("plop", "gvuvyv");
                             if (call.method.equals("isSupported")) {
                                 result.success(true);
                             } else if (call.method.equals("verify")) {
@@ -56,22 +55,16 @@ public class MainActivity extends FlutterActivity {
                                 String domain = call.argument("domain");
                                 HpkAutofillService.addPassword(login, password, domain);
                                 result.success(true);
-                            } else if (call.method.equals("retrievePasswords")) {
-                                String attribute = call.argument("attribute");
-                                if (attribute.equals("password")) {
-                                    Password p = HpkAutofillService.retrievePassword(false);
-                                    result.success(p.password);
-                                } else if (attribute.equals("login")) {
-                                    Password p = HpkAutofillService.retrievePassword(false);
-                                    result.success(p.login);
-                                } else if (attribute.equals("domain")) {
-                                    Password p = HpkAutofillService.retrievePassword(false);
-                                    result.success(p.domain);
-                                } else if (attribute.equals("next")) {
-                                    HpkAutofillService.retrievePassword(true);
-                                    result.success("empty");
-                                }
-                             }
+                            } else if (call.method.equals("retrievePassword")) {
+                                Password p = HpkAutofillService.retrievePassword();
+                                result.success(p.getAsMap());
+                            } else if (call.method.equals("canRetrievePassword")) {
+                                String b = HpkAutofillService.canRetrievePassword();
+                                Log.v("MAIN", "canRetrievePassword: " + b);
+                                result.success(b);
+                            }
+//                            else
+//                                result.notImplemented();
                             // Note: this method is invoked on the main thread.
                             // TODO
                         }
