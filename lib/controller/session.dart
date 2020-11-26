@@ -554,8 +554,8 @@ class  Session {
     final uri = Uri.parse("${this._url}:${this._port}/$api_version/secrets/${password.id}");
 
     final resource = Resource("secrets", password.id,
-        attributes: {"content": password.serialize(encryptionKey.key)},
-        toOne: {"owner": owner});
+        attributes: {"content": password.serialize(null /*encryptionKey.key*/)},
+        );
     final test = await this.jsonApiClient.updateResourceAt(uri, resource, headers: this._header);
     return test.isSuccessful;
   }

@@ -70,7 +70,9 @@ class VaultViewPage extends State<VaultView> {
                         password.domain = domainTextController.text;
                         password.login = loginTextController.text;
                         password.password = passwordTextController.text;
-                        widget.session.updatePassword(password, widget.vault.getIdentifier(), widget.vault.symmetricKey.asSymmetric());
+                        widget.session.updatePassword(password, widget.vault.getIdentifier(), null /*widget.vault.symmetricKey.asSymmetric()*/)
+                            .then((value) => ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(content: Text(value ? "Password updated" : "Network error"),)));
                       }
                   ),
                   RaisedButton(color: Colors.red,
@@ -170,12 +172,12 @@ class VaultViewPage extends State<VaultView> {
                         child: Text("SHOW"),
                         onPressed: () {
                           Clipboard.setData(new ClipboardData(text: passwordList[idx].password));
-                          Scaffold.of(context).showSnackBar(new SnackBar(content: Text("password copied to clipboard")));
+                          ScaffoldMessenger.of(context).showSnackBar(new SnackBar(content: Text("password copied to clipboard")));
                         },
                       ),
                       FlatButton(
                         child: Text("COPY"),
-                        onPressed: () { Scaffold.of(context)
+                        onPressed: () { ScaffoldMessenger.of(context)
                             .showSnackBar(new SnackBar(content: Text("Your password is ${passwordList[idx].password}")));
                         },
                       )

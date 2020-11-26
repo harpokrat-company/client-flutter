@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:f_grecaptcha/f_grecaptcha.dart';
+import 'package:harpokrat/controller/f_grecaptcha.dart';
 import 'package:harpokrat/views/code_view.dart';
 
 import 'package:harpokrat/views/mfa_view.dart';
@@ -105,7 +105,7 @@ class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
 
   final String title;
-  Session session = Session('https://api.dev.harpokrat.com', "443");
+  Session session = Session('https://api.harpokrat.com', "443");
 
   @override
   _MyHomePageState createState() => new _MyHomePageState();

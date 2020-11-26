@@ -1,12 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.harpokrat.android">
-
     <!-- The INTERNET permission is required for development. Specifically,
          flutter needs it to communicate with the running application
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
-
     <!-- io.flutter.app.FlutterApplication is an android.app.Application that
          calls FlutterMain.startInitialization(this); in its onCreate method.
          In most cases you can leave this as-is, but you if you want to provide
@@ -15,7 +13,19 @@
     <application
         android:name="io.flutter.app.FlutterApplication"
         android:label="harpokrat"
+        android:theme="@style/Theme.AppCompat"
         android:icon="@mipmap/ic_launcher">
+
+        <service
+            android:name=".HpkAutofillService"
+            android:label="Harpokrat Autofill Service"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+        </service>
+
+
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"

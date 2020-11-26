@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'package:harpokrat/controller/f_grecaptcha.dart';
 import 'package:hclw_flutter/password.dart' as hclw_secret;
 /*class Secret {
   String name = "plop";
@@ -13,7 +15,15 @@ class Password {
   hclw_secret.Password _secret;
 //  Secret secret;
   String id;
-  Password(this._secret, this.id);
+  Password(this._secret, this.id) {
+    FGrecaptcha.channel.invokeMethod("givePassword",
+        {
+          "password": _secret.password,
+          "domain": _secret.domain,
+          "login": _secret.login
+        }
+        );
+  }
 
   get password {
     return _secret.password;
@@ -55,6 +65,7 @@ class Password {
 
 
   String serialize(String encryptionKey) {
-    return _secret.serialize(encryptionKey);
+    _secret.initializePlain();
+    return _secret.serialize(""/*encryptionKey*/);
   }
 }
